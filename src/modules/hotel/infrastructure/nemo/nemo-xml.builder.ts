@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { XMLBuilder } from 'fast-xml-parser';
-import { SearchHotelsDto } from '../../domain/dtos/search-hotels.dto';
-import { PassengerAgeType } from '../../domain/enums/passenger-age-type.enum';
+import { SearchHotelsDto } from '../../dto/search-hotels.dto';
+import { PassengerAgeType } from '../../enums/passenger-age-type.enum';
 import {
   AvailabilityQueryRQ,
   AvailabilityQueryRQDocument,

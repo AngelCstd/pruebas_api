@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { HotelModule } from './modules/hotel.module';
+import { HealthModule } from './modules/health/health.module';
+import { HotelModule } from './modules/hotel/hotel.module';
 
-@Module({ imports: [HotelModule] })
+@Module({ imports: [HealthModule, HotelModule] })
 export class AppModule {}

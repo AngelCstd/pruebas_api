@@ -1,5 +1,44 @@
 # Project Handoff & Technical Summary: Hotel Provider Service
 
+> **Actualización local:** el código fue reorganizado por funcionalidad bajo `src/modules/hotel` y `src/modules/health`. Se añadieron consultas GET de sólo lectura para salud, estado de proveedores y catálogo mock. Estas rutas no llaman a Nemo y no crean ni modifican información. Consulte `API_CONTRACT.md` para el contrato vigente.
+
+## Actualización de entrega — 2026-09-03
+
+### Cambios implementados
+
+- La estructura anterior por capas globales fue migrada a módulos funcionales NestJS.
+- Todo el dominio hotelero quedó agrupado en `src/modules/hotel`.
+- La infraestructura Nemo quedó aislada en `src/modules/hotel/infrastructure/nemo`.
+- Se creó `src/modules/health` para endpoints operativos.
+- Se eliminaron archivos duplicados y sin referencias bajo `src/common`.
+- Se agregó un repositorio de fixtures mock exclusivamente de lectura.
+
+### Consultas disponibles
+
+- `GET /health`
+- `GET /providers/status`
+- `GET /hotels/destinations`
+- `GET /hotels/room-types`
+- `GET /hotels/catalog`
+- `GET /hotels/catalog/:hotelCode`
+
+Todas usan Mock de manera predeterminada. Se puede indicar `provider=nemo`, pero la integración permanece bloqueada hasta contar con habilitación, credenciales y adaptadores verificados.
+
+### Protección de la integración Nemo
+
+- No se realizó ninguna llamada externa a Nemo durante esta entrega.
+- `NEMO_ENABLED=false` es el valor recomendado mientras no exista API key.
+- Catálogo y detalle Nemo devuelven `503` sin configuración y `501` mientras falte el adaptador.
+- Destinos y tipos de habitación Nemo devuelven `501` porque esas operaciones no aparecen en la documentación disponible.
+- Se dejaron comentarios `TODO(Nemo Excel)` para validar dichas operaciones contra el archivo oficial.
+
+### Verificación
+
+- Compilación TypeScript exitosa.
+- Respuestas `200`, `400`, `404`, `501` y `503` verificadas según cada escenario.
+- Contrato actualizado en `API_CONTRACT.md`.
+- Estado consolidado en `PROGRESS.md`.
+
 ## 1. Contexto y Objetivos del Proyecto
 
 El objetivo de este proyecto es construir un backend desacoplado, modular y fuertemente tipado en **NestJS** para integrar la API de inventario hotelero de **Price Navigator (Nemo Group)**.

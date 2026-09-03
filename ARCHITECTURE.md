@@ -1,5 +1,32 @@
 # System Architecture Specification: Hotel Provider Service
 
+> **Estado del documento:** combina la implementación actual con una arquitectura objetivo. Los componentes descritos como Redis, guards, Swagger/OpenAPI, `NemoHttpClient`, telemetría y el flujo completo de reservación todavía no existen en el código. La implementación actual se organiza por funcionalidad bajo `src/modules/`; los endpoints GET de catálogo funcionan exclusivamente con fixtures mock y no llaman a Nemo.
+
+## Implementación actual — 2026-09-03
+
+```text
+src/
+├── app.module.ts
+├── main.ts
+├── config/
+└── modules/
+    ├── health/
+    │   ├── health.controller.ts
+    │   └── health.module.ts
+    └── hotel/
+        ├── controllers/
+        ├── dto/
+        ├── enums/
+        ├── infrastructure/nemo/
+        ├── models/
+        ├── repositories/
+        ├── services/
+        ├── strategies/
+        └── hotel.module.ts
+```
+
+La organización es feature-first: las piezas del dominio hotelero permanecen juntas y la infraestructura externa queda detrás de los servicios del módulo. El repositorio mock implementa lecturas locales. `NemoReadService` funciona como límite seguro: distingue operaciones documentadas, credenciales ausentes y operaciones pendientes de confirmar en el Excel, sin ejecutar llamadas externas.
+
 ## 1. Executive Summary for Leadership
 
 The **Hotel Provider Service** is an enterprise-grade backend service architected to standardize, decouple, and orchestrate hotel inventory distribution across heterogeneous upstream travel wholesalers.

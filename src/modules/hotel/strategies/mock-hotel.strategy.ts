@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { SearchHotelsDto } from '../domain/dtos/search-hotels.dto';
-import { ProviderType } from '../domain/enums/provider.enum';
-import { HotelItem, HotelRate, HotelSearchResult } from '../domain/models/hotel.model';
+import { SearchHotelsDto } from '../dto/search-hotels.dto';
+import { ProviderType } from '../enums/provider.enum';
+import { HotelItem, HotelRate, HotelSearchResult } from '../models/hotel.model';
 import { HotelProviderStrategy } from './hotel-provider.strategy';
 
 @Injectable()

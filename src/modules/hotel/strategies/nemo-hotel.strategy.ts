@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { NemoXmlAdapter } from '../adapters/nemo/nemo-xml.adapter';
-import { SearchHotelsDto } from '../domain/dtos/search-hotels.dto';
-import { HotelSearchResult } from '../domain/models/hotel.model';
+import { SearchHotelsDto } from '../dto/search-hotels.dto';
+import { NemoXmlAdapter } from '../infrastructure/nemo/nemo-xml.adapter';
+import { HotelSearchResult } from '../models/hotel.model';
 import { HotelProviderStrategy } from './hotel-provider.strategy';
 
 @Injectable()

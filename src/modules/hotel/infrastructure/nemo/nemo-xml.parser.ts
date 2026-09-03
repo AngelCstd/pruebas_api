@@ -10,8 +10,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { XMLParser } from 'fast-xml-parser';
-import { HotelItem, HotelRate, HotelRoomRate, HotelSearchResult } from '../../domain/models/hotel.model';
-import { ProviderType } from '../../domain/enums/provider.enum';
+import { ProviderType } from '../../enums/provider.enum';
+import { HotelItem, HotelRate, HotelRoomRate, HotelSearchResult } from '../../models/hotel.model';
 
 type UnknownRecord = Record<string, unknown>;
 

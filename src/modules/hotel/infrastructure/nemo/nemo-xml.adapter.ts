@@ -5,8 +5,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import axios from 'axios';
-import { SearchHotelsDto } from '../../domain/dtos/search-hotels.dto';
-import { HotelSearchResult } from '../../domain/models/hotel.model';
+import { SearchHotelsDto } from '../../dto/search-hotels.dto';
+import { HotelSearchResult } from '../../models/hotel.model';
 import { NemoXmlBuilder } from './nemo-xml.builder';
 import { NemoXmlParser } from './nemo-xml.parser';
 
