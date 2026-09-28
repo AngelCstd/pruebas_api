@@ -1,3 +1,8 @@
+import { BookingDetailResult, BookingCancellationResult } from '../../domain/models/booking-lifecycle.model';
+import { HotelDetailsResult } from '../../domain/models/hotel-details.model';
+import { HotelCatalogResult } from '../../domain/models/hotel-catalog.model';
+import { BookingResult } from '../../domain/models/booking.model';
+import { RateValidationResult, CancellationFeesResult } from '../../domain/models/rate-lifecycle.model';
 import {
   BadGatewayException,
   BadRequestException,
@@ -9,7 +14,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { XMLParser } from 'fast-xml-parser';
+import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { HotelItem, HotelRate, HotelRoomRate, HotelSearchResult } from '../../domain/models/hotel.model';
 import { ProviderType } from '../../domain/enums/provider.enum';
 
@@ -26,6 +31,89 @@ export class NemoXmlParser {
   });
 
   public parseAvailabilityResponse(xml: string, fallbackTransactionId: string): HotelSearchResult {
+    const response = this.parseResponse(xml, 'AvailabilityQueryRS');
+    const hotelsContainer = this.optionalRecord(response.Hotels);
+    const hotels = hotelsContainer
+      ? this.toRecordArray(hotelsContainer.Hotel).map((hotel) => this.mapHotel(hotel))
+      : [];
+    const pagination = this.optionalRecord(response.Pagination);
+    const totalItems = pagination
+      ? this.toNumber(pagination.TotalItems, hotels.length)
+      : hotels.length;
+
+    return {
+      transactionId: this.optionalString(response['@_TransactionId']) ?? fallbackTransactionId,
+      provider: ProviderType.NEMO,
+      totalItems,
+      hotels,
+    };
+  }
+
+  public parseValidationResponse(xml: string, fallbackTransactionId: string): RateValidationResult {
+    const response = this.parseResponse(xml, 'AvailabilityValidationRS');
+    const price = this.asRecord(response.ValidatedPrice, 'ValidatedPrice');
+    const changed = this.requiredString(price['@_PriceChanged'], 'PriceChanged');
+    if (!['true', 'false', '1', '0'].includes(changed)) {
+      throw new BadGatewayException('Invalid Nemo PriceChanged flag.');
+    }
+    return {
+      transactionId: this.optionalString(response['@_TransactionId']) ?? fallbackTransactionId,
+      provider: ProviderType.NEMO,
+      tripProductId: this.requiredString(response.TripProductID, 'TripProductID'),
+      validatedPrice: {
+        amount: this.requiredAmount(price['@_Amount'], 'Amount'),
+        currency: this.requiredString(price['@_Currency'], 'Currency'),
+        priceChanged: changed === 'true' || changed === '1',
+      },
+      availabilityStatus: this.requiredString(response.AvailabilityStatus, 'AvailabilityStatus'),
+      rateStatus: this.requiredString(response.RateStatus, 'RateStatus'),
+    };
+  }
+
+  public parseCancellationFeesResponse(xml: string, fallbackTransactionId: string): CancellationFeesResult {
+    const response = this.parseResponse(xml, 'CancellationFeesQueryRS');
+    if (response.FeeSchedule === undefined) {
+      throw new BadGatewayException('Invalid Nemo XML: missing FeeSchedule.');
+    }
+    const schedule = response.FeeSchedule === '' ? {} : this.asRecord(response.FeeSchedule, 'FeeSchedule');
+    const deadline = response.FreeCancellationDeadline === undefined ? undefined
+      : this.requiredDate(response.FreeCancellationDeadline, 'FreeCancellationDeadline');
+    return {
+      transactionId: this.optionalString(response['@_TransactionId']) ?? fallbackTransactionId,
+      provider: ProviderType.NEMO,
+      tripProductId: this.requiredString(response.TripProductID, 'TripProductID'),
+      currency: this.requiredString(response.Currency, 'Currency'),
+      ...(deadline ? { freeCancellationDeadline: deadline } : {}),
+      feeSchedule: this.toRecordArray(schedule.Tier).map((tier) => {
+        const startDate = this.requiredDate(tier['@_StartDate'], 'StartDate');
+        const endDate = tier['@_EndDate'] === undefined ? undefined : this.requiredDate(tier['@_EndDate'], 'EndDate');
+        const penaltyPercentage = this.requiredAmount(tier['@_PenaltyPercentage'], 'PenaltyPercentage');
+        if (penaltyPercentage > 100 || (endDate && Date.parse(endDate) < Date.parse(startDate))) {
+          throw new BadGatewayException('Invalid Nemo cancellation fee tier.');
+        }
+        return { startDate, ...(endDate ? { endDate } : {}),
+          feeAmount: this.requiredAmount(tier['@_FeeAmount'], 'FeeAmount'), penaltyPercentage };
+      }),
+    };
+  }
+
+  private requiredDate(value: unknown, label: string): string {
+    const text = this.requiredString(value, label);
+    if (!Number.isFinite(Date.parse(text))) throw new BadGatewayException(`Invalid Nemo ${label}.`);
+    return text;
+  }
+
+  private requiredAmount(value: unknown, label: string): number {
+    const text = this.requiredString(value, label);
+    const amount = Number(text);
+    if (!Number.isFinite(amount) || amount < 0) throw new BadGatewayException(`Invalid Nemo ${label}.`);
+    return amount;
+  }
+
+  private parseResponse(xml: string, root: string): UnknownRecord {
+    if (XMLValidator.validate(xml) !== true) {
+      throw new BadGatewayException('Invalid Nemo XML document.');
+    }
     const parsed: unknown = this.xmlParser.parse(xml);
     const document = this.asRecord(parsed, 'Nemo response document');
     const errorRoot = this.optionalRecord(document.ErrorRS);
@@ -33,7 +121,7 @@ export class NemoXmlParser {
       this.throwNemoError(errorRoot);
     }
 
-    const response = this.asRecord(document.AvailabilityQueryRS, 'AvailabilityQueryRS');
+    const response = this.asRecord(document[root], root);
     const exceptions = this.optionalRecord(response.Exceptions);
     if (exceptions) {
       const notification = this.firstRecord(exceptions.Notification);
@@ -58,21 +146,7 @@ export class NemoXmlParser {
       throw new BadGatewayException('Nemo returned an unsuccessful hotel search response.');
     }
 
-    const hotelsContainer = this.optionalRecord(response.Hotels);
-    const hotels = hotelsContainer
-      ? this.toRecordArray(hotelsContainer.Hotel).map((hotel) => this.mapHotel(hotel))
-      : [];
-    const pagination = this.optionalRecord(response.Pagination);
-    const totalItems = pagination
-      ? this.toNumber(pagination.TotalItems, hotels.length)
-      : hotels.length;
-
-    return {
-      transactionId: this.optionalString(response['@_TransactionId']) ?? fallbackTransactionId,
-      provider: ProviderType.NEMO,
-      totalItems,
-      hotels,
-    };
+    return response;
   }
 
   private mapHotel(hotel: UnknownRecord): HotelItem {
@@ -148,6 +222,10 @@ export class NemoXmlParser {
         return new UnauthorizedException('Authentication with hotel supplier failed.');
       case 1106:
         return new ConflictException(`Rate price has changed upstream: ${message}`);
+      case 5010:
+      case 5020:
+        return new NotFoundException('Requested hotel rate was not found or is invalid.');
+      case 1107:
       case 5011:
         return new GoneException('The hotel rate session has expired. Please refresh search.');
       case 5000:
@@ -199,7 +277,7 @@ export class NemoXmlParser {
 
   private requiredString(value: unknown, label: string): string {
     const result = this.optionalString(value);
-    if (result === undefined) {
+    if (result === undefined || result.trim() === '') {
       throw new BadGatewayException(`Invalid Nemo XML: missing ${label}.`);
     }
     return result;
@@ -217,4 +295,110 @@ export class NemoXmlParser {
   private toNumber(value: unknown, fallback: number): number {
     return this.optionalNumber(value) ?? fallback;
   }
+  public parseHotelDetailsResponse(xml: string): HotelDetailsResult {
+    const response = this.parseResponse(xml, 'AdditionalInfoQueryRS');
+    return {
+      hotelCode: this.requiredString(response.HotelCode, 'HotelCode'),
+      description: this.requiredString(response.Description, 'Description'),
+      checkInTime: this.requiredTime(response.CheckInTime, 'CheckInTime'),
+      checkOutTime: this.requiredTime(response.CheckOutTime, 'CheckOutTime'),
+      amenities: this.collection(response.Amenities, 'Amenity').map((item) => ({
+        code: this.requiredString(item['@_Code'], 'Amenity.Code'), name: this.requiredString(item['#text'], 'Amenity.Name'),
+      })),
+      images: this.collection(response.Images, 'Image').map((item) => {
+        const url = this.requiredString(item['@_Url'], 'Image.Url');
+        try { if (!['https:', 'http:'].includes(new URL(url).protocol)) throw new Error(); }
+        catch { throw new BadGatewayException('Invalid Nemo image URL.'); }
+        return { category: this.requiredString(item['@_Category'], 'Image.Category'), url };
+      }),
+    };
+  }
+
+  public parseHotelCatalogResponse(xml: string): HotelCatalogResult {
+    const response = this.parseResponse(xml, 'HotelCatalogQueryRS');
+    const hotels = this.collection(response.Hotels, 'HotelSummary').map((hotel) => ({
+      hotelCode: this.requiredString(hotel['@_HotelCode'], 'HotelCode'),
+      hotelName: this.requiredString(hotel['@_HotelName'], 'HotelName'),
+      rating: this.boundedNumber(hotel['@_Rating'], 'Rating', 0, 5),
+      latitude: this.boundedNumber(hotel['@_Latitude'], 'Latitude', -90, 90),
+      longitude: this.boundedNumber(hotel['@_Longitude'], 'Longitude', -180, 180),
+      city: this.requiredString(hotel['@_City'], 'City'), country: this.requiredString(hotel['@_Country'], 'Country'),
+    }));
+    const hotelCount = this.requiredAmount(response.HotelCount, 'HotelCount');
+    if (!Number.isInteger(hotelCount) || hotelCount !== hotels.length) throw new BadGatewayException('Invalid Nemo HotelCount.');
+    return { destinationCode: this.requiredString(response.DestinationCode, 'DestinationCode'),
+      destinationName: this.requiredString(response.DestinationName, 'DestinationName'), hotelCount, hotels };
+  }
+
+  public parseBookingResponse(xml: string): BookingResult {
+    const response = this.parseResponse(xml, 'BookingProductsRS');
+    return { ...this.mapBookingDetail(response), creationDate: this.requiredDate(response.CreationDate, 'CreationDate') };
+  }
+
+  private mapBookingDetail(response: UnknownRecord): BookingDetailResult {
+    const price = this.asRecord(response.TotalPrice, 'TotalPrice');
+    const hotel = this.asRecord(response.HotelInformation, 'HotelInformation');
+    const checkIn = this.requiredDate(hotel.CheckIn, 'CheckIn');
+    const checkOut = this.requiredDate(hotel.CheckOut, 'CheckOut');
+    if (Date.parse(checkOut) <= Date.parse(checkIn)) throw new BadGatewayException('Invalid Nemo booking dates.');
+    return {
+      bookingLocator: this.requiredString(response.BookingLocator, 'BookingLocator'),
+      supplierConfirmationCode: this.requiredString(response.SupplierConfirmationCode, 'SupplierConfirmationCode'),
+      clientReference: this.requiredString(response.ClientReference, 'ClientReference'),
+      bookingStatus: this.requiredString(response.BookingStatus, 'BookingStatus'),
+      totalPrice: { amount: this.requiredAmount(price['@_Amount'], 'Amount'), currency: this.requiredString(price['@_Currency'], 'Currency') },
+      hotelInformation: { hotelCode: this.requiredString(hotel.HotelCode, 'HotelCode'),
+        hotelName: this.requiredString(hotel.HotelName, 'HotelName'), checkIn, checkOut },
+    };
+  }
+
+  public parseBookingDetailResponse(xml: string): BookingDetailResult {
+    const response = this.parseResponse(xml, 'BookingQueryRS');
+    const detail = this.mapBookingDetail(response);
+    if (response.CancellationDeadline !== undefined) {
+      detail.cancellationDeadline = this.requiredDate(response.CancellationDeadline, 'CancellationDeadline');
+    }
+    if (response.VoucherUrl !== undefined) {
+      const url = this.requiredString(response.VoucherUrl, 'VoucherUrl');
+      try { if (!['https:', 'http:'].includes(new URL(url).protocol)) throw new Error(); }
+      catch { throw new BadGatewayException('Invalid Nemo voucher URL.'); }
+      detail.voucherUrl = url;
+    }
+    return detail;
+  }
+
+  public parseBookingCancellationResponse(xml: string): BookingCancellationResult {
+    const response = this.parseResponse(xml, 'BookingCancellationRS');
+    return {
+      bookingLocator: this.requiredString(response.BookingLocator, 'BookingLocator'),
+      cancellationStatus: this.requiredString(response.CancellationStatus, 'CancellationStatus'),
+      cancellationReference: this.requiredString(response.CancellationReference, 'CancellationReference'),
+      penaltyFee: this.parseMoney(response.PenaltyFee, 'PenaltyFee'),
+      refundAmount: this.parseMoney(response.RefundAmount, 'RefundAmount'),
+    };
+  }
+
+  private parseMoney(value: unknown, label: string): { amount: number; currency: string } {
+    const money = this.asRecord(value, label);
+    return { amount: this.requiredAmount(money['@_Amount'], label + '.Amount'),
+      currency: this.requiredString(money['@_Currency'], label + '.Currency') };
+  }
+
+  private collection(value: unknown, item: string): UnknownRecord[] {
+    if (value === undefined || value === '') return [];
+    return this.toRecordArray(this.asRecord(value, item + ' container')[item]);
+  }
+
+  private requiredTime(value: unknown, label: string): string {
+    const time = this.requiredString(value, label);
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new BadGatewayException(`Invalid Nemo ${label}.`);
+    return time;
+  }
+
+  private boundedNumber(value: unknown, label: string, min: number, max: number): number {
+    const number = Number(this.requiredString(value, label));
+    if (!Number.isFinite(number) || number < min || number > max) throw new BadGatewayException(`Invalid Nemo ${label}.`);
+    return number;
+  }
+
 }

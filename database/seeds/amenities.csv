@@ -1,0 +1,896 @@
+group_code,amenity_code,description
+MNO.HTL.AMT.SER,820,Sabanas
+MNO.HTL.AMT.SER,821,Limpieza
+MNO.HTL.AMT.SER,822,Toallas
+NMO.HTL.AMT.BCH,1,Playa de arena
+NMO.HTL.AMT.BCH,2,Playa de piedras
+NMO.HTL.AMT.BCH,3,Playa de rocas
+NMO.HTL.AMT.BCH,4,Tumbonas
+NMO.HTL.AMT.BCH,5,Sombrillas
+NMO.HTL.AMT.CAT,1,Restaurante buffet
+NMO.HTL.AMT.CAT,2,Snack bar
+NMO.HTL.AMT.DST,1,Centro población
+NMO.HTL.AMT.DST,2,Gran Ciudad más próxima
+NMO.HTL.AMT.DST,3,Centro turístico
+NMO.HTL.AMT.DST,4,Playa
+NMO.HTL.AMT.DST,5,Mar
+NMO.HTL.AMT.DST,6,Lago
+NMO.HTL.AMT.DST,7,Río
+NMO.HTL.AMT.DST,8,Bosque
+NMO.HTL.AMT.DST,9,Parque
+NMO.HTL.AMT.DST,10,Centros comerciales
+NMO.HTL.AMT.DST,11,Restaurantes
+NMO.HTL.AMT.DST,12,Bares/ Pubs
+NMO.HTL.AMT.DST,13,Discoteca / Club
+NMO.HTL.AMT.DST,14,Campo de golf
+NMO.HTL.AMT.DST,15,Transporte público
+NMO.HTL.AMT.DST,16,Estación de Metro
+NMO.HTL.AMT.DST,17,Estación de autobuses
+NMO.HTL.AMT.DST,18,Estación de Trenes
+NMO.HTL.AMT.DST,19,Pistas de esquí
+NMO.HTL.AMT.DST,20,Telesquí
+NMO.HTL.AMT.DST,21,Esquí de fondo
+NMO.HTL.AMT.DST,818,Distancia al aeropuerto
+NMO.HTL.AMT.DST,819,Distancia a la playa
+NMO.HTL.AMT.DST,823,Aeropuerto/Puerto/Estación
+NMO.HTL.AMT.FCL,1,Aire acondicionado en zonas comunes
+NMO.HTL.AMT.FCL,2,Hall Recepción
+NMO.HTL.AMT.FCL,3,Servicio de facturación 24 horas
+NMO.HTL.AMT.FCL,4,Servicio de recepción 24 horas
+NMO.HTL.AMT.FCL,5,Caja de seguridad
+NMO.HTL.AMT.FCL,6,Cambio de moneda
+NMO.HTL.AMT.FCL,7,Guardarropa
+NMO.HTL.AMT.FCL,8,Ascensor-es
+NMO.HTL.AMT.FCL,9,Cafetería
+NMO.HTL.AMT.FCL,10,Quiosco
+NMO.HTL.AMT.FCL,11,Supermercado
+NMO.HTL.AMT.FCL,12,Tienda-s
+NMO.HTL.AMT.FCL,13,Peluquería
+NMO.HTL.AMT.FCL,14,Bar-es
+NMO.HTL.AMT.FCL,15,Pub-s
+NMO.HTL.AMT.FCL,16,Discoteca / Club nocturno
+NMO.HTL.AMT.FCL,17,Teatro / Auditorio
+NMO.HTL.AMT.FCL,18,Sala de conferencias
+NMO.HTL.AMT.FCL,19,Casino
+NMO.HTL.AMT.FCL,20,Sala de juegos
+NMO.HTL.AMT.FCL,21,Sala de TV
+NMO.HTL.AMT.FCL,22,Sala para desayunos
+NMO.HTL.AMT.FCL,23,Comedor
+NMO.HTL.AMT.FCL,24,Restaurante -s
+NMO.HTL.AMT.FCL,25,Aire Acondicionado en Restaurante
+NMO.HTL.AMT.FCL,26,Zona no fumador en restaurante
+NMO.HTL.AMT.FCL,27,Zona para fumadores en restaurante
+NMO.HTL.AMT.FCL,28,Tronas
+NMO.HTL.AMT.FCL,29,Disponibilidad de cobertura para teléfonos móviles
+NMO.HTL.AMT.FCL,30,Acceso a internet
+NMO.HTL.AMT.FCL,31,Internet Inalámbrico
+NMO.HTL.AMT.FCL,32,Servicio de habitaciones
+NMO.HTL.AMT.FCL,33,Servicio de lavandería
+NMO.HTL.AMT.FCL,34,Lavandería
+NMO.HTL.AMT.FCL,35,Servicio médico
+NMO.HTL.AMT.FCL,36,Accesible en silla de ruedas
+NMO.HTL.AMT.FCL,37,Trastero para bicicletas
+NMO.HTL.AMT.FCL,38,Alquiler de Bicicletas
+NMO.HTL.AMT.FCL,39,Aparcamiento
+NMO.HTL.AMT.FCL,40,Garaje
+NMO.HTL.AMT.FCL,41,Miniclub
+NMO.HTL.AMT.FCL,42,Área de juegos
+NMO.HTL.AMT.FCL,43,Número de Piscinas
+NMO.HTL.AMT.FCL,44,Piscina cubierta
+NMO.HTL.AMT.FCL,45,Piscina al aire libre
+NMO.HTL.AMT.FCL,46,Piscina de agua dulce
+NMO.HTL.AMT.FCL,47,Piscina de agua salada
+NMO.HTL.AMT.FCL,48,Piscina climatizada
+NMO.HTL.AMT.FCL,49,Piscina para niños
+NMO.HTL.AMT.FCL,50,Chiringuito de piscina
+NMO.HTL.AMT.FCL,51,Tumbonas
+NMO.HTL.AMT.FCL,52,Sombrillas
+NMO.HTL.AMT.FCL,53,Jacuzzi
+NMO.HTL.AMT.FCL,54,Sauna
+NMO.HTL.AMT.FCL,55,Estudio Solarium / Rayos UVA
+NMO.HTL.AMT.FCL,56,Terraza Solarium
+NMO.HTL.AMT.FCL,57,Baño de vapor
+NMO.HTL.AMT.FCL,58,Masaje
+NMO.HTL.AMT.FCL,59,Ofertas especiales de Spa
+NMO.HTL.AMT.FCL,60,Gimnasio
+NMO.HTL.AMT.FCL,61,Alojamiento + Desayuno
+NMO.HTL.AMT.FCL,62,Media Pensión
+NMO.HTL.AMT.FCL,63,Pensión Completa
+NMO.HTL.AMT.FCL,64,Desayuno buffet
+NMO.HTL.AMT.FCL,65,Desayuno Continental
+NMO.HTL.AMT.FCL,66,Desayuno
+NMO.HTL.AMT.FCL,67,Almuerzo tipo buffet
+NMO.HTL.AMT.FCL,68,Almuerzo de menú a la carta
+NMO.HTL.AMT.FCL,69,Almuerzo de menú a elegir
+NMO.HTL.AMT.FCL,70,Cena tipo buffet
+NMO.HTL.AMT.FCL,71,Cena de menú a la carta
+NMO.HTL.AMT.FCL,72,Cena de menú a elegir
+NMO.HTL.AMT.FCL,73,Todo incluído
+NMO.HTL.AMT.FCL,74,Bebida incluída
+NMO.HTL.AMT.FCL,75,Comida dietética
+NMO.HTL.AMT.FCL,76,Paquetes especiales
+NMO.HTL.AMT.FCL,77,Gimnasia acuática
+NMO.HTL.AMT.FCL,78,Barco torpedo
+NMO.HTL.AMT.FCL,79,Esquí acuático
+NMO.HTL.AMT.FCL,80,Motos acuáticas
+NMO.HTL.AMT.FCL,81,Barco a motor
+NMO.HTL.AMT.FCL,82,Buceo
+NMO.HTL.AMT.FCL,83,Windsurf
+NMO.HTL.AMT.FCL,84,Vela
+NMO.HTL.AMT.FCL,85,Catamarán
+NMO.HTL.AMT.FCL,86,Canoas
+NMO.HTL.AMT.FCL,87,Bote a pedales
+NMO.HTL.AMT.FCL,88,Ping Pong
+NMO.HTL.AMT.FCL,89,Squash
+NMO.HTL.AMT.FCL,90,Aerobic
+NMO.HTL.AMT.FCL,91,Gimnasia
+NMO.HTL.AMT.FCL,92,Tiro con arco
+NMO.HTL.AMT.FCL,93,Montar a caballo
+NMO.HTL.AMT.FCL,94,Bicicleta / bicicleta de montaña
+NMO.HTL.AMT.FCL,95,Balonmano
+NMO.HTL.AMT.FCL,96,Baloncesto
+NMO.HTL.AMT.FCL,97,Volleyball
+NMO.HTL.AMT.FCL,98,Volley de playa
+NMO.HTL.AMT.FCL,99,Billar americano o ruso
+NMO.HTL.AMT.FCL,100,Petanca
+NMO.HTL.AMT.FCL,101,Bolera
+NMO.HTL.AMT.FCL,102,Mini Golf
+NMO.HTL.AMT.FCL,103,Golf
+NMO.HTL.AMT.FCL,104,Actividades de animación
+NMO.HTL.AMT.FCL,105,Animación infantil
+NMO.HTL.AMT.FCL,106,Surf
+NMO.HTL.AMT.FCL,107,Tenis
+NMO.HTL.AMT.FCL,108,Paddle
+NMO.HTL.AMT.FCL,109,Badminton
+NMO.HTL.AMT.FCL,110,Dardos
+NMO.HTL.AMT.FCL,111,Servicio de Parking
+NMO.HTL.AMT.FCL,112,Bar de la piscina
+NMO.HTL.AMT.FCL,217,Spa
+NMO.HTL.AMT.FCL,884,Equipo de radio grabador y reproductor de CD
+NMO.HTL.AMT.FSE,1,WiFi
+NMO.HTL.AMT.FSE,2,Internet de alta velocidad
+NMO.HTL.AMT.FSE,3,Conserje
+NMO.HTL.AMT.FSE,4,Gerente en turno las 24 hs.
+NMO.HTL.AMT.FSE,5,Servicio de niñera
+NMO.HTL.AMT.FSE,6,Valet Parking
+NMO.HTL.AMT.FSE,7,Piscina
+NMO.HTL.AMT.FSE,8,Gimnasio
+NMO.HTL.AMT.FSE,9,Cancha de golf
+NMO.HTL.AMT.FSE,10,Helipuerto
+NMO.HTL.AMT.FSE,11,Limusine
+NMO.HTL.AMT.FSE,12,Cancha de tenis
+NMO.HTL.AMT.FSE,13,Frigobar
+NMO.HTL.AMT.FSE,14,Servicio de habitación
+NMO.HTL.AMT.FSE,15,Personal de animación y entretenimiento
+NMO.HTL.AMT.FSE,16,Deportes acuáticos no motorizados
+NMO.HTL.AMT.HTL,1,Centro de negocios
+NMO.HTL.AMT.HTL,2,Salón de belleza
+NMO.HTL.AMT.HTL,3,Boutique
+NMO.HTL.AMT.HTL,4,Cuidado de niños
+NMO.HTL.AMT.HTL,5,"Aparcamiento (A pagar en el hotel, si se aplica)"
+NMO.HTL.AMT.HTL,6,Servicio de Alquiler de coche
+NMO.HTL.AMT.HTL,7,Accesible para minusválidos
+NMO.HTL.AMT.HTL,8,Registro temprano
+NMO.HTL.AMT.HTL,9,Golf
+NMO.HTL.AMT.HTL,10,Gimnasio
+NMO.HTL.AMT.HTL,11,Aparcamiento de Autobuses
+NMO.HTL.AMT.HTL,12,Piscina interior climatizada
+NMO.HTL.AMT.HTL,13,Piscina infantil
+NMO.HTL.AMT.HTL,14,Ascensores
+NMO.HTL.AMT.HTL,15,Vestíbulo
+NMO.HTL.AMT.HTL,16,Servicio de lavandería
+NMO.HTL.AMT.HTL,17,Servicio de maletero
+NMO.HTL.AMT.HTL,18,Piscina al aire libre
+NMO.HTL.AMT.HTL,19,Servicio de habitaciones
+NMO.HTL.AMT.HTL,20,Sauna
+NMO.HTL.AMT.HTL,21,Tienda
+NMO.HTL.AMT.HTL,22,Solarium
+NMO.HTL.AMT.HTL,23,Servicio de Agencia de Viajes
+NMO.HTL.AMT.HTL,24,Tenis
+NMO.HTL.AMT.HTL,25,Parque temático cerca
+NMO.HTL.AMT.HTL,26,Tiro al pichón
+NMO.HTL.AMT.HTL,27,Cata de vinos
+NMO.HTL.AMT.HTL,28,Cata de vinos cerca
+NMO.HTL.AMT.HTL,29,Montar en Globo
+NMO.HTL.AMT.HTL,30,Montar en Globo cerca
+NMO.HTL.AMT.HTL,31,Parque temático
+NMO.HTL.AMT.HTL,32,Tiro al Arco
+NMO.HTL.AMT.HTL,33,Tiro al Arco cerca
+NMO.HTL.AMT.HTL,34,Alquiler de bicicletas
+NMO.HTL.AMT.HTL,35,Alquiler de bicicletas cerca
+NMO.HTL.AMT.HTL,36,Montar a caballo
+NMO.HTL.AMT.HTL,37,Montar a caballo cerca
+NMO.HTL.AMT.HTL,38,Kárting
+NMO.HTL.AMT.HTL,39,Kárting cerca
+NMO.HTL.AMT.HTL,40,Parque temático
+NMO.HTL.AMT.HTL,41,Tiro al pichón cerca
+NMO.HTL.AMT.HTL,42,Servicio canguro
+NMO.HTL.AMT.HTL,43,Servicio canguro cerca
+NMO.HTL.AMT.HTL,44,Jacuzzi
+NMO.HTL.AMT.HTL,45,Casino
+NMO.HTL.AMT.HTL,46,Casino cerca
+NMO.HTL.AMT.HTL,47,Clases de cocina
+NMO.HTL.AMT.HTL,48,Clases de cocina cerca
+NMO.HTL.AMT.HTL,49,Aire acondicionado
+NMO.HTL.AMT.HTL,50,Instalaciones para personas con dificultades físicas
+NMO.HTL.AMT.HTL,51,Acceso a silla de ruedas
+NMO.HTL.AMT.HTL,52,Portería
+NMO.HTL.AMT.HTL,53,Alquiler de coches
+NMO.HTL.AMT.HTL,54,Coche es fundamental
+NMO.HTL.AMT.HTL,55,Garaje
+NMO.HTL.AMT.HTL,56,Disco/club nocturno cerca
+NMO.HTL.AMT.HTL,57,Disco/club nocturno
+NMO.HTL.AMT.HTL,58,Esquile de ovejas
+NMO.HTL.AMT.HTL,59,Plantación de cultivos
+NMO.HTL.AMT.HTL,60,Montar en tractor
+NMO.HTL.AMT.HTL,61,Alimentación de animales
+NMO.HTL.AMT.HTL,62,Excursiones a granjas
+NMO.HTL.AMT.HTL,63,Vista de animales
+NMO.HTL.AMT.HTL,64,Recogida de fruta / cultivos
+NMO.HTL.AMT.HTL,65,Visita a crías
+NMO.HTL.AMT.HTL,66,Cosechar
+NMO.HTL.AMT.HTL,67,Agrupación de ganado
+NMO.HTL.AMT.HTL,68,Nacimiento de ovejas
+NMO.HTL.AMT.HTL,69,Recogida de huevos
+NMO.HTL.AMT.HTL,70,Golf
+NMO.HTL.AMT.HTL,71,Golf cerca
+NMO.HTL.AMT.HTL,72,Sauna cerca
+NMO.HTL.AMT.HTL,73,Balneario
+NMO.HTL.AMT.HTL,74,Balneario cerca
+NMO.HTL.AMT.HTL,75,Centro de belleza
+NMO.HTL.AMT.HTL,76,Centro de belleza cerca
+NMO.HTL.AMT.HTL,77,Internet de alta velocidad
+NMO.HTL.AMT.HTL,78,Montar a caballo
+NMO.HTL.AMT.HTL,79,Sauna
+NMO.HTL.AMT.HTL,80,Centro de salud y belleza
+NMO.HTL.AMT.HTL,81,Centro de salud y belleza cerca
+NMO.HTL.AMT.HTL,82,Solario
+NMO.HTL.AMT.HTL,83,Solario cerca
+NMO.HTL.AMT.HTL,84,Masajes
+NMO.HTL.AMT.HTL,85,Masajes cerca
+NMO.HTL.AMT.HTL,86,Peluquería
+NMO.HTL.AMT.HTL,87,Peluquería cerca
+NMO.HTL.AMT.HTL,88,Sauna
+NMO.HTL.AMT.HTL,89,Club infantil
+NMO.HTL.AMT.HTL,90,Club infantil cerca
+NMO.HTL.AMT.HTL,91,Lavandería
+NMO.HTL.AMT.HTL,92,Minigolf
+NMO.HTL.AMT.HTL,93,Minigolf cerca
+NMO.HTL.AMT.HTL,94,No se acepta tarjetas de crédito
+NMO.HTL.AMT.HTL,95,Máquina de Fax
+NMO.HTL.AMT.HTL,96,Conexión a Internet
+NMO.HTL.AMT.HTL,97,Televisión
+NMO.HTL.AMT.HTL,98,Playa privada
+NMO.HTL.AMT.HTL,99,Navegación
+NMO.HTL.AMT.HTL,100,Navegación cerca
+NMO.HTL.AMT.HTL,101,Motos acuáticas
+NMO.HTL.AMT.HTL,102,Motos acuáticas cerca
+NMO.HTL.AMT.HTL,103,Bucear con snorkel
+NMO.HTL.AMT.HTL,104,Bucear con snorkel cerca
+NMO.HTL.AMT.HTL,105,Montar en balsa
+NMO.HTL.AMT.HTL,106,Montar en balsa cerca
+NMO.HTL.AMT.HTL,107,Parque acuático
+NMO.HTL.AMT.HTL,108,Parque acuático cerca
+NMO.HTL.AMT.HTL,109,Playa privada cerca
+NMO.HTL.AMT.HTL,110,Playa privada
+NMO.HTL.AMT.HTL,111,Playa pública cerca
+NMO.HTL.AMT.HTL,112,Enfrente de la playa
+NMO.HTL.AMT.HTL,113,Deportes acuáticos cerca
+NMO.HTL.AMT.HTL,114,Submarinismo
+NMO.HTL.AMT.HTL,115,Submarinismo cerca
+NMO.HTL.AMT.HTL,116,Residencia
+NMO.HTL.AMT.HTL,117,Se permite animales domésticos
+NMO.HTL.AMT.HTL,118,Baño natural de aguas termales
+NMO.HTL.AMT.HTL,119,Baño mixto de aguas termales
+NMO.HTL.AMT.HTL,120,Baño de aguas termales para el mismo sexo
+NMO.HTL.AMT.HTL,121,Baño de aguas termales sólo para familias
+NMO.HTL.AMT.HTL,122,Baño natural de aguas termales al aire libre
+NMO.HTL.AMT.HTL,123,Las comidas sólo se sirven en las habitaciones
+NMO.HTL.AMT.HTL,124,Las comidas sólo se sirven en el comedor
+NMO.HTL.AMT.HTL,125,Se incluye refrescos de bienvenida a su llegada
+NMO.HTL.AMT.HTL,126,Supermercado
+NMO.HTL.AMT.HTL,127,Supermercado cerca
+NMO.HTL.AMT.HTL,128,Tienda
+NMO.HTL.AMT.HTL,129,Tienda cerca
+NMO.HTL.AMT.HTL,130,Agencia de viajes
+NMO.HTL.AMT.HTL,131,Boutique
+NMO.HTL.AMT.HTL,132,Garaje
+NMO.HTL.AMT.HTL,133,Tenis
+NMO.HTL.AMT.HTL,134,Tenis cerca
+NMO.HTL.AMT.HTL,135,Mesa de ping pong
+NMO.HTL.AMT.HTL,136,Mesa de ping pong cerca
+NMO.HTL.AMT.HTL,137,Voleibol
+NMO.HTL.AMT.HTL,138,Campo de fútbol
+NMO.HTL.AMT.HTL,139,Voltaje
+NMO.HTL.AMT.HTL,140,Windsurfing
+NMO.HTL.AMT.HTL,141,Deportes acuáticos
+NMO.HTL.AMT.HTL,142,Windsurfing cerca
+NMO.HTL.AMT.HTL,143,Deportes acuáticos cerca
+NMO.HTL.AMT.HTL,144,Tres plantas
+NMO.HTL.AMT.HTL,145,Piscina cubierta climatizada
+NMO.HTL.AMT.HTL,146,Piano Bar/Lounge
+NMO.HTL.AMT.HTL,147,Lavandería Auto servicio
+NMO.HTL.AMT.HTL,148,Prensa gratis
+NMO.HTL.AMT.HTL,149,Health Club
+NMO.HTL.AMT.HTL,150,Skii
+NMO.HTL.AMT.HTL,151,Pasillos exteriores
+NMO.HTL.AMT.HTL,152,Habitaciones para no fumadores
+NMO.HTL.AMT.HTL,153,Parking (de pago)
+NMO.HTL.AMT.HTL,154,traslados gratis a Universal
+NMO.HTL.AMT.HTL,155,Traslados gratis a Sea World
+NMO.HTL.AMT.HTL,156,Parking para camiones
+NMO.HTL.AMT.HTL,157,Servicio de lavandera a la habitación
+NMO.HTL.AMT.HTL,158,Oficina de Información
+NMO.HTL.AMT.HTL,159,Maquina de hielo
+NMO.HTL.AMT.HTL,160,Shuffleboard
+NMO.HTL.AMT.HTL,161,Food Court
+NMO.HTL.AMT.HTL,162,Tiki Bar
+NMO.HTL.AMT.HTL,163,piscina temática
+NMO.HTL.AMT.HTL,164,Pesca
+NMO.HTL.AMT.HTL,165,Traslado gratuito al aeropuerto
+NMO.HTL.AMT.HTL,166,Habitaciones VIP
+NMO.HTL.AMT.HTL,167,Cancha para deportes de raqueta
+NMO.HTL.AMT.HTL,168,Business Services
+NMO.HTL.AMT.HTL,169,Traslado al aeropuerto
+NMO.HTL.AMT.HTL,170,Cena elegante
+NMO.HTL.AMT.HTL,171,Servicio de limpieza en seco
+NMO.HTL.AMT.HTL,172,Correos
+NMO.HTL.AMT.HTL,173,Deportes acuáticos no motorizados
+NMO.HTL.AMT.HTL,174,Servicios matrimoniales
+NMO.HTL.AMT.HTL,175,Hamam
+NMO.HTL.AMT.HTL,176,Café Internet
+NMO.HTL.AMT.HTL,177,Swim-up Bar
+NMO.HTL.AMT.HTL,178,Alquiler de computadoras
+NMO.HTL.AMT.HTL,179,Conserje
+NMO.HTL.AMT.HTL,180,Ascensores Braille
+NMO.HTL.AMT.HTL,181,Gran pantalla TV
+NMO.HTL.AMT.HTL,182,Traslado a los principales parques temáticos
+NMO.HTL.AMT.HTL,183,Maquinas de venta
+NMO.HTL.AMT.HTL,184,Pista de Jogging
+NMO.HTL.AMT.HTL,185,Biblioteca
+NMO.HTL.AMT.HTL,186,Sinagoga
+NMO.HTL.AMT.HTL,187,Zona para picnic
+NMO.HTL.AMT.HTL,188,Pasillos interiores
+NMO.HTL.AMT.HTL,189,Llamadas locales gratuitas
+NMO.HTL.AMT.HTL,190,Tienda de regalos
+NMO.HTL.AMT.HTL,191,Mostrador de actividades
+NMO.HTL.AMT.HTL,192,Hot Tub
+NMO.HTL.AMT.HTL,193,Sala de banquetes/Reuniones
+NMO.HTL.AMT.HTL,194,Traslados gratis a Disney
+NMO.HTL.AMT.HTL,195,Newsstand
+NMO.HTL.AMT.HTL,196,Traslado a Wet n Wild
+NMO.HTL.AMT.HTL,197,Distribuidor de billetes/ATM
+NMO.HTL.AMT.HTL,198,Espectáculos en vivo
+NMO.HTL.AMT.HTL,199,Traslado al centro comercial de Lake Buena Vista
+NMO.HTL.AMT.HTL,200,Personal Multilingüe
+NMO.HTL.AMT.HTL,201,Bar(s)
+NMO.HTL.AMT.HTL,202,Servicio de Renta de Bicicletas
+NMO.HTL.AMT.HTL,203,Sala de Desayuno
+NMO.HTL.AMT.HTL,204,Centro de Negocios
+NMO.HTL.AMT.HTL,205,Sala de Conferencias
+NMO.HTL.AMT.HTL,206,Gimnasio
+NMO.HTL.AMT.HTL,207,Concerje
+NMO.HTL.AMT.HTL,208,Planta Ejecutiva
+NMO.HTL.AMT.HTL,209,Instrucción de Golf
+NMO.HTL.AMT.HTL,210,Facilidades de Planchado (con pedido)
+NMO.HTL.AMT.HTL,211,Librería/Sala de Lectura
+NMO.HTL.AMT.HTL,212,Parking - Cercano
+NMO.HTL.AMT.HTL,213,Parking - En Hotel
+NMO.HTL.AMT.HTL,214,Piscina
+NMO.HTL.AMT.HTL,215,Restaurant(s)
+NMO.HTL.AMT.HTL,216,Shop(s)
+NMO.HTL.AMT.HTL,217,Spa
+NMO.HTL.AMT.HTL,218,Servicio de Seguridad(en recepción)
+NMO.HTL.AMT.HTL,219,Sauna
+NMO.HTL.AMT.HTL,220,Pista de Tenis
+NMO.HTL.AMT.HTL,222,Jacuzzi
+NMO.HTL.AMT.HTL,223,Wi-fi(areas públicas)
+NMO.HTL.AMT.HTL,224,Business Corner
+NMO.HTL.AMT.HTL,225,TV por cable
+NMO.HTL.AMT.HTL,226,Frigobar
+NMO.HTL.AMT.HTL,227,Grupos permitidos
+NMO.HTL.AMT.HTL,228,Habitaciones para discapacitados
+NMO.HTL.AMT.HTL,229,Edificio histórico
+NMO.HTL.AMT.HTL,230,Hidromasajes
+NMO.HTL.AMT.HTL,231,cocina
+NMO.HTL.AMT.HTL,232,Cajón con llave
+NMO.HTL.AMT.HTL,233,Manicura
+NMO.HTL.AMT.HTL,234,Asistencia médica
+NMO.HTL.AMT.HTL,235,Hotel para no fumadores
+NMO.HTL.AMT.HTL,236,Pool
+NMO.HTL.AMT.HTL,237,Salones para Eventos
+NMO.HTL.AMT.HTL,238,Cama solar
+NMO.HTL.AMT.HTL,239,Apertura con tarjeta magnetica
+NMO.HTL.AMT.HTL,240,Overnight FedEx Services
+NMO.HTL.AMT.HTL,499,Desayuno continental
+NMO.HTL.AMT.HTL,500,Conexion de puerto de datos telefÃ³nico
+NMO.HTL.AMT.HTL,501,Servicio de mucama
+NMO.HTL.AMT.HTL,502,Guardaequipajes
+NMO.HTL.AMT.HTL,503,Habitaciones comunicadas
+NMO.HTL.AMT.HTL,504,HabitaciÃ³n para fumadores
+NMO.HTL.AMT.HTL,505,High floor
+NMO.HTL.AMT.HTL,666,NO TRADUCIDO!!!
+NMO.HTL.AMT.HTL,667,24-hour front desk
+NMO.HTL.AMT.HTL,668,24-hour security guard
+NMO.HTL.AMT.HTL,669,24-Hour Valet Parking Service (Charge)
+NMO.HTL.AMT.HTL,670,Airport courtesy car service
+NMO.HTL.AMT.HTL,671,All Inclusive Plan available
+NMO.HTL.AMT.HTL,672,Animation Team
+NMO.HTL.AMT.HTL,673,Bay View Rooms Available
+NMO.HTL.AMT.HTL,674,Beach Access
+NMO.HTL.AMT.HTL,675,Beach Club
+NMO.HTL.AMT.HTL,676,Beach View Rooms Available
+NMO.HTL.AMT.HTL,677,Cold weather hook-ups
+NMO.HTL.AMT.HTL,678,Complimentary newspaper
+NMO.HTL.AMT.HTL,679,Concierge Service
+NMO.HTL.AMT.HTL,680,Conference services including audio/visual equipment
+NMO.HTL.AMT.HTL,681,Cribs and rollaway beds available
+NMO.HTL.AMT.HTL,682,Cribs Available
+NMO.HTL.AMT.HTL,683,Cribs available at no charge
+NMO.HTL.AMT.HTL,684,Desk/work area
+NMO.HTL.AMT.HTL,685,Dual-Line Speaker Telephone
+NMO.HTL.AMT.HTL,686,Elevators accessible for the physically challenged
+NMO.HTL.AMT.HTL,687,Executive rooms
+NMO.HTL.AMT.HTL,688,Executive suites
+NMO.HTL.AMT.HTL,689,Fax and copy service available through the front desk
+NMO.HTL.AMT.HTL,690,Fax and photocopy services for a nominal fee
+NMO.HTL.AMT.HTL,691,Free local telephone calls under 30 minutes
+NMO.HTL.AMT.HTL,692,Free parking
+NMO.HTL.AMT.HTL,693,Heated outdoor pool
+NMO.HTL.AMT.HTL,694,Internet access in lobby
+NMO.HTL.AMT.HTL,695,Kid's Pool
+NMO.HTL.AMT.HTL,696,Large desk area
+NMO.HTL.AMT.HTL,697,Lobby bar
+NMO.HTL.AMT.HTL,698,Long distance access
+NMO.HTL.AMT.HTL,699,Meeting facilities
+NMO.HTL.AMT.HTL,700,Meeting/banquet facilities
+NMO.HTL.AMT.HTL,701,Mini Golf Course
+NMO.HTL.AMT.HTL,702,Mountain View Rooms Available
+NMO.HTL.AMT.HTL,703,Nearby indoor parking
+NMO.HTL.AMT.HTL,704,Number of Guest Rooms
+NMO.HTL.AMT.HTL,705,Personal trainers
+NMO.HTL.AMT.HTL,706,Pet Policy
+NMO.HTL.AMT.HTL,707,Refrigerator available for a nominal fee
+NMO.HTL.AMT.HTL,708,Rooms to accommodate physically challenged guests available
+NMO.HTL.AMT.HTL,709,Rooms with Seating Area Available
+NMO.HTL.AMT.HTL,710,Same day laundry/valet services
+NMO.HTL.AMT.HTL,711,"Sauna, steam bath and tanning salon"
+NMO.HTL.AMT.HTL,712,Shopping Connected to Hotel
+NMO.HTL.AMT.HTL,713,Skin care and Swedish massage therapist
+NMO.HTL.AMT.HTL,714,Specialist a la carte Restaurants
+NMO.HTL.AMT.HTL,715,Suites Available
+NMO.HTL.AMT.HTL,716,Tour desk
+NMO.HTL.AMT.HTL,717,Valet parking
+NMO.HTL.AMT.HTL,718,Wake-up calls
+NMO.HTL.AMT.HTL,719,Wine Bar
+NMO.HTL.AMT.HTL,720,Full American Breakfast Buffet
+NMO.HTL.AMT.HTL,721,Complimentary shuttle services to area malls
+NMO.HTL.AMT.HTL,722,On-site guest laundry facilities
+NMO.HTL.AMT.HTL,723,Sofa bed
+NMO.HTL.AMT.HTL,724,Beach Butler Service
+NMO.HTL.AMT.HTL,725,Oceanview Suites
+NMO.HTL.AMT.HTL,726,Conference Facilities
+NMO.HTL.AMT.HTL,727,Wedding Gift
+NMO.HTL.AMT.HTL,728,microwave
+NMO.HTL.AMT.HTL,729,fax service
+NMO.HTL.AMT.HTL,730,Convention Center
+NMO.HTL.AMT.HTL,731,Water Activities
+NMO.HTL.AMT.HTL,732,Extreme Sports
+NMO.HTL.AMT.HTL,733,Swim up pool bar
+NMO.HTL.AMT.HTL,734,Mini-club and children’s playground
+NMO.HTL.AMT.HTL,735,Terrace-solarium
+NMO.HTL.AMT.HTL,736,Caja de seguridad
+NMO.HTL.AMT.HTL,737,Child Care
+NMO.HTL.AMT.HTL,738,In Room Safe
+NMO.HTL.AMT.HTL,739,29 flat screen satellite and cable TV
+NMO.HTL.AMT.HTL,740,Open air theatre
+NMO.HTL.AMT.HTL,741,Doctor on premise.
+NMO.HTL.AMT.HTL,742,Scuba diving learning thank
+NMO.HTL.AMT.HTL,743,restaurant with terrace and non-smoking section
+NMO.HTL.AMT.HTL,744,"Complimentary lounge chairs, towels and umbrellas by the pool area"
+NMO.HTL.AMT.HTL,745,Miniclub and children’s playground
+NMO.HTL.AMT.HTL,746,Free Airport Transportation
+NMO.HTL.AMT.HTL,747,Compimentary Coffee
+NMO.HTL.AMT.HTL,748,Full service spa
+NMO.HTL.AMT.HTL,749,Group and meeting facilities
+NMO.HTL.AMT.HTL,750,Money exchange bureau
+NMO.HTL.AMT.HTL,751,Fitness center
+NMO.HTL.AMT.HTL,752,Towel service and beach and pool chairs
+NMO.HTL.AMT.HTL,753,27-hole golf course
+NMO.HTL.AMT.HTL,754,Free Newspaper Mon-Fri
+NMO.HTL.AMT.HTL,755,Near the Convention Center
+NMO.HTL.AMT.HTL,756,Disabled rooms
+NMO.HTL.AMT.HTL,757,Tea/coffee maker
+NMO.HTL.AMT.HTL,758,Guest Self - Laundry Facilities
+NMO.HTL.AMT.HTL,759,Free 24-hour airport shuttle
+NMO.HTL.AMT.HTL,760,Cocktail Lounge
+NMO.HTL.AMT.HTL,761,Outdoor Parking
+NMO.HTL.AMT.HTL,762,Indoor Heated Pool
+NMO.HTL.AMT.HTL,763,Outdoor Whirlpool/ Hot Tub
+NMO.HTL.AMT.HTL,764,Parking Available
+NMO.HTL.AMT.HTL,765,No Pets Allowed
+NMO.HTL.AMT.HTL,766,Government Travellers: FEMA Approved
+NMO.HTL.AMT.HTL,767,Indoor Whirlpool/ Hot Tub
+NMO.HTL.AMT.HTL,768,Heated Pool
+NMO.HTL.AMT.HTL,769,Outdoor Heated Pool
+NMO.HTL.AMT.HTL,770,Playground
+NMO.HTL.AMT.HTL,771,Furnished balconies in every room and suite
+NMO.HTL.AMT.HTL,772,"Luxury baths with marble highlights, array of grooming essentials, hair dryer"
+NMO.HTL.AMT.HTL,773,Business Center with Internet access (fees apply)
+NMO.HTL.AMT.HTL,774,Bilingual Staff (English/Spanish)
+NMO.HTL.AMT.HTL,775,"Royal Service accommodations available with private Lounge and ""adults only"" Pool exclusively for Ro"
+NMO.HTL.AMT.HTL,776,9 Hole Golf Course
+NMO.HTL.AMT.HTL,777,Afternoon Tea
+NMO.HTL.AMT.HTL,778,Teleconference Service
+NMO.HTL.AMT.HTL,779,VIP Floor
+NMO.HTL.AMT.HTL,780,Secretarial Services
+NMO.HTL.AMT.HTL,781,Multiple phone lines
+NMO.HTL.AMT.HTL,782,Tobacco shop
+NMO.HTL.AMT.HTL,783,Telephones
+NMO.HTL.AMT.HTL,784,Individual in room A/C and heat
+NMO.HTL.AMT.HTL,785,WIFI
+NMO.HTL.AMT.HTL,786,Marble bathrooms
+NMO.HTL.AMT.HTL,787,Complimentary High Speed Internet
+NMO.HTL.AMT.HTL,788,Non-Smoking Rooms Available
+NMO.HTL.AMT.HTL,789,Billiard Room
+NMO.HTL.AMT.HTL,790,Hiking/Nature Area
+NMO.HTL.AMT.HTL,791,Meeting Room
+NMO.HTL.AMT.HTL,792,Handicap Room
+NMO.HTL.AMT.HTL,793,Privete pool
+NMO.HTL.AMT.HTL,794,Family Rooms
+NMO.HTL.AMT.HTL,795,Starbucks
+NMO.HTL.AMT.HTL,796,Executive Retreat
+NMO.HTL.AMT.HTL,797,BOSE Music sistem
+NMO.HTL.AMT.HTL,798,iPOD Docking station
+NMO.HTL.AMT.HTL,799,Yoga
+NMO.HTL.AMT.HTL,800,Binoculars
+NMO.HTL.AMT.HTL,801,Complimentary Bottle of water
+NMO.HTL.AMT.HTL,802,complimentary Tea &amp; Cookies
+NMO.HTL.AMT.HTL,803,Rooftop pool
+NMO.HTL.AMT.HTL,804,Washer and Dryer
+NMO.HTL.AMT.HTL,805,Dishwasher
+NMO.HTL.AMT.HTL,806,Privates cabanas
+NMO.HTL.AMT.HTL,807,Butler Service
+NMO.HTL.AMT.HTL,808,Silverware
+NMO.HTL.AMT.HTL,809,Stove
+NMO.HTL.AMT.HTL,810,Fully-equipped kitchens
+NMO.HTL.AMT.HTL,811,Snack shop
+NMO.HTL.AMT.HTL,812,Complimentary wirless internet access
+NMO.HTL.AMT.HTL,813,Mini Market
+NMO.HTL.AMT.HTL,814,Mini Market
+NMO.HTL.AMT.HTL,815,Almuerzo
+NMO.HTL.AMT.HTL,816,Cena
+NMO.HTL.AMT.HTL,817,Ventilador
+NMO.HTL.AMT.HTL,818,Cajero automatico
+NMO.HTL.AMT.HTL,819,Clases de baile
+NMO.HTL.AMT.HTL,825,Calefacción
+NMO.HTL.AMT.HTL,826,Tarjeta de crédito
+NMO.HTL.AMT.HTL,827,Baño turco
+NMO.HTL.AMT.HTL,828,DDN
+NMO.HTL.AMT.HTL,829,Actividades recreativas para niños
+NMO.HTL.AMT.HTL,830,Cancha de Paddle
+NMO.HTL.AMT.HTL,831,Confitería
+NMO.HTL.AMT.HTL,832,Copa de Bienvenida
+NMO.HTL.AMT.HTL,833,Jardín
+NMO.HTL.AMT.HTL,834,Kitchenette
+NMO.HTL.AMT.HTL,835,Mini-bar
+NMO.HTL.AMT.HTL,836,Niñera
+NMO.HTL.AMT.HTL,837,Parrilla
+NMO.HTL.AMT.HTL,838,Quincho
+NMO.HTL.AMT.HTL,839,Sala de Juegos
+NMO.HTL.AMT.HTL,840,Servicio de traslados
+NMO.HTL.AMT.HTL,841,Teléfono Directo
+NMO.HTL.AMT.HTL,842,TV satelital
+NMO.HTL.AMT.HTL,843,Ventiladores de Techo
+NMO.HTL.AMT.HTL,844,Moto de nieve
+NMO.HTL.AMT.HTL,845,Actividades Outdoors
+NMO.HTL.AMT.HTL,846,Aire Acondicionado Central
+NMO.HTL.AMT.HTL,852,Avistaje de Aves
+NMO.HTL.AMT.HTL,862,Calefacción con control individual en cada ambiente
+NMO.HTL.AMT.HTL,863,Calefacción por loza radiante
+NMO.HTL.AMT.HTL,865,Caminatas
+NMO.HTL.AMT.HTL,866,Cancha de Polo
+NMO.HTL.AMT.HTL,867,Canotaje
+NMO.HTL.AMT.HTL,868,Cava
+NMO.HTL.AMT.HTL,870,Circuito de aventura
+NMO.HTL.AMT.HTL,871,Clases de Natación
+NMO.HTL.AMT.HTL,872,Clases y Show de Tango
+NMO.HTL.AMT.HTL,874,Coaching
+NMO.HTL.AMT.HTL,875,Colección de DVD's
+NMO.HTL.AMT.HTL,877,Comidas típicas
+NMO.HTL.AMT.HTL,880,Ducha Escocesa
+NMO.HTL.AMT.HTL,881,Ducha Exterior
+NMO.HTL.AMT.HTL,885,Escuela de Boxeo
+NMO.HTL.AMT.HTL,887,Facilidades para Discapacitados
+NMO.HTL.AMT.HTL,888,Galería de Arte
+NMO.HTL.AMT.HTL,890,Grupo Electrógeno
+NMO.HTL.AMT.HTL,891,Guardería
+NMO.HTL.AMT.HTL,892,Guardería de equipos de Ski
+NMO.HTL.AMT.HTL,893,Heliski
+NMO.HTL.AMT.HTL,898,Honesty Bar
+NMO.HTL.AMT.HTL,899,Huerta orgánica
+NMO.HTL.AMT.HTL,901,Insonorización total
+NMO.HTL.AMT.HTL,902,Invernadero
+NMO.HTL.AMT.HTL,907,Living
+NMO.HTL.AMT.HTL,908,Maquina de Café Expresso Necta
+NMO.HTL.AMT.HTL,910,Masajes y Sanación
+NMO.HTL.AMT.HTL,911,Meditación
+NMO.HTL.AMT.HTL,913,Minipiscina con Hidromasaje
+NMO.HTL.AMT.HTL,914,Muelle
+NMO.HTL.AMT.HTL,915,Observatorio Astronómico de alta definición
+NMO.HTL.AMT.HTL,916,Paseos Guiados por el cielo de la Patagonia
+NMO.HTL.AMT.HTL,918,Personal Cheff
+NMO.HTL.AMT.HTL,919,Personal Shopper
+NMO.HTL.AMT.HTL,921,Prensa diaria
+NMO.HTL.AMT.HTL,922,Proyectores
+NMO.HTL.AMT.HTL,923,Relax room
+NMO.HTL.AMT.HTL,924,Represa
+NMO.HTL.AMT.HTL,927,Sala de Bar con degustación de vinos de altura
+NMO.HTL.AMT.HTL,928,Sala de estar
+NMO.HTL.AMT.HTL,929,Sala de estar en Suites
+NMO.HTL.AMT.HTL,931,Salón de Convenciones
+NMO.HTL.AMT.HTL,932,Salón de Té
+NMO.HTL.AMT.HTL,933,Salon para uso multiple
+NMO.HTL.AMT.HTL,935,Seguridad contra incendios
+NMO.HTL.AMT.HTL,936,Servicio de mensajería
+NMO.HTL.AMT.HTL,937,Servicio de Playa
+NMO.HTL.AMT.HTL,938,Servicio de ropa blanca
+NMO.HTL.AMT.HTL,939,Show de Tango
+NMO.HTL.AMT.HTL,940,Show de Tango
+NMO.HTL.AMT.HTL,941,Sistema de rocío
+NMO.HTL.AMT.HTL,942,Snack Nocturno
+NMO.HTL.AMT.HTL,943,Telefonía móvil a disposición del huésped
+NMO.HTL.AMT.HTL,944,Terraza con Solarium y Jaccuzzi
+NMO.HTL.AMT.HTL,945,Toallas para playa
+NMO.HTL.AMT.HTL,946,Transfers in/out
+NMO.HTL.AMT.HTL,947,Traslados y Excursiones
+NMO.HTL.AMT.HTL,948,Tratamiento de spa y masajes en la habitación
+NMO.HTL.AMT.HTL,950,"Tv LCD 32""/37"""
+NMO.HTL.AMT.HTL,955,Vestuarios
+NMO.HTL.AMT.HTL,956,Viandas
+NMO.HTL.AMT.HTL,958,Viñedos
+NMO.HTL.AMT.HTL,959,Visita Guiada a Bodega
+NMO.HTL.AMT.HTL,965,Wellness Bar
+NMO.HTL.AMT.HTL,966,Wellness Boutique
+NMO.HTL.AMT.HTL,968,Zona de Lectura
+NMO.HTL.AMT.HTL,969,Servicio lustrado de zapatos
+NMO.HTL.AMT.HTL,970,Florería
+NMO.HTL.AMT.HTL,971,Outdoor swimming pool
+NMO.HTL.AMT.HTL,972,Limosina
+NMO.HTL.AMT.HTL,973,Parada de autobus
+NMO.HTL.AMT.HTL,974,Servicio de tour
+NMO.HTL.AMT.HTR,1,Baño
+NMO.HTL.AMT.HTR,2,Ducha
+NMO.HTL.AMT.HTR,3,Bañera
+NMO.HTL.AMT.HTR,4,Secador
+NMO.HTL.AMT.HTR,5,Teléfono de línea directa
+NMO.HTL.AMT.HTR,6,TV
+NMO.HTL.AMT.HTR,7,TV vía satélite / TV por cable
+NMO.HTL.AMT.HTR,8,Radio
+NMO.HTL.AMT.HTR,9,Estéreo
+NMO.HTL.AMT.HTR,10,Acceso a internet
+NMO.HTL.AMT.HTR,11,Pequeña cocina
+NMO.HTL.AMT.HTR,12,Cocina
+NMO.HTL.AMT.HTR,13,Minibar
+NMO.HTL.AMT.HTR,14,Nevera
+NMO.HTL.AMT.HTR,15,Mini nevera
+NMO.HTL.AMT.HTR,16,Horno
+NMO.HTL.AMT.HTR,17,Microondas
+NMO.HTL.AMT.HTR,18,Cafetera / Tetera
+NMO.HTL.AMT.HTR,19,Lavadora
+NMO.HTL.AMT.HTR,20,Plancha con tabla
+NMO.HTL.AMT.HTR,21,Camas dobles
+NMO.HTL.AMT.HTR,22,Cama King size
+NMO.HTL.AMT.HTR,23,Enmoquetado/a
+NMO.HTL.AMT.HTR,24,Aire acondicionado Central
+NMO.HTL.AMT.HTR,25,Aire acondicionado individual
+NMO.HTL.AMT.HTR,26,Calefacción central
+NMO.HTL.AMT.HTR,27,Calefacción individual
+NMO.HTL.AMT.HTR,28,Caja de seguridad
+NMO.HTL.AMT.HTR,29,Sala de estar
+NMO.HTL.AMT.HTR,30,Balcón
+NMO.HTL.AMT.HTR,31,Terraza
+NMO.HTL.AMT.HTR,32,Accesible silla de ruedas
+NMO.HTL.AMT.HTR,33,Baño minusválidos
+NMO.HTL.AMT.HTR,34,Aire acondicionado
+NMO.HTL.AMT.HTR,35,Servicio de despertador
+NMO.HTL.AMT.HTR,36,Película de video
+NMO.HTL.AMT.HTR,37,Internet por televisión
+NMO.HTL.AMT.HTR,38,Conexión para portátil
+NMO.HTL.AMT.HTR,39,Plancha para trajes
+NMO.HTL.AMT.HTR,40,Voltaje
+NMO.HTL.AMT.HTR,57,Fax
+NMO.HTL.AMT.HTR,100,Apertura Magnetica de Hab.
+NMO.HTL.AMT.HTR,101,Salida de baño
+NMO.HTL.AMT.HTR,102,Teléfono celular
+NMO.HTL.AMT.HTR,103,DDI
+NMO.HTL.AMT.HTR,104,DDN
+NMO.HTL.AMT.HTR,105,Vestidor
+NMO.HTL.AMT.HTR,106,Música funcional
+NMO.HTL.AMT.HTR,107,Mascotas
+NMO.HTL.AMT.HTR,108,Almohadas a la carta
+NMO.HTL.AMT.HTR,109,Set de cortesía
+NMO.HTL.AMT.HTR,110,Correo de voz
+NMO.HTL.AMT.HTR,111,Secarropa
+NMO.HTL.AMT.HTR,224,Aire Acondicionado(Habitación)
+NMO.HTL.AMT.HTR,225,Balcón/Terraza
+NMO.HTL.AMT.HTR,226,Zócalo para Ordenador/Fax
+NMO.HTL.AMT.HTR,227,Ventilador
+NMO.HTL.AMT.HTR,228,Televisión de patalla plana
+NMO.HTL.AMT.HTR,229,Internet de Alta Velocidad
+NMO.HTL.AMT.HTR,230,Facilidades para planchado
+NMO.HTL.AMT.HTR,231,Jacuzzi
+NMO.HTL.AMT.HTR,232,Habitaciones No-Fumador
+NMO.HTL.AMT.HTR,233,Películas Pay-per-view
+NMO.HTL.AMT.HTR,234,Habitaciones con seguridad
+NMO.HTL.AMT.HTR,235,Wi-fi internet
+NMO.HTL.AMT.HTR,236,Escritorio
+NMO.HTL.AMT.HTR,237,television
+NMO.HTL.AMT.HTR,239,Acuatic Sports
+NMO.HTL.AMT.HTR,240,Cable television
+NMO.HTL.AMT.HTR,241,Catering service
+NMO.HTL.AMT.HTR,242,Cigar Bar
+NMO.HTL.AMT.HTR,243,Complimentary toiletries available upon request
+NMO.HTL.AMT.HTR,244,In-room Safes
+NMO.HTL.AMT.HTR,245,in room TV internet connection
+NMO.HTL.AMT.HTR,246,Alarm Clock
+NMO.HTL.AMT.HTR,247,Exercise Room
+NMO.HTL.AMT.HTR,248,Cable/Satellite TV
+NMO.HTL.AMT.HTR,249,Full Breakfast Buffet
+NMO.HTL.AMT.HTR,250,Complimentary breakfast
+NMO.HTL.AMT.HTR,251,Coffee Maker
+NMO.HTL.AMT.HTR,252,Kitchenette
+NMO.HTL.AMT.HTR,253,Refrigerated mini-bar
+NMO.HTL.AMT.HTR,254,Free English Breakfast
+NMO.HTL.AMT.HTR,255,Free full breakfast
+NMO.HTL.AMT.HTR,256,TV Movies - Pay/View (In Room)
+NMO.HTL.AMT.HTR,257,Large desk with chair
+NMO.HTL.AMT.HTR,258,In-Room Coffee Maker
+NMO.HTL.AMT.HTR,259,In-Room Desk
+NMO.HTL.AMT.HTR,260,Gas BBQ grill
+NMO.HTL.AMT.HTR,261,In room Lap top safes
+NMO.HTL.AMT.HTR,262,CD Player
+NMO.HTL.AMT.HTR,263,CD Player
+NMO.HTL.AMT.HTR,506,Botones
+NMO.HTL.AMT.HTR,507,Rollaway
+NMO.HTL.AMT.HTR,508,TDD Phone
+NMO.HTL.AMT.HTR,509,Room Service (24hrs)
+NMO.HTL.AMT.HTR,510,Room Service (limited hours)
+NMO.HTL.AMT.HTR,682,Cuna
+NMO.HTL.AMT.HTR,723,Sofa Cama
+NMO.HTL.AMT.HTR,798,iPod Dock
+NMO.HTL.AMT.HTR,820,Baño privado
+NMO.HTL.AMT.HTR,824,Tostadora
+NMO.HTL.AMT.HTR,825,Cocina eléctrica
+NMO.HTL.AMT.HTR,847,Amenities
+NMO.HTL.AMT.HTR,848,Amenities L' Occitane
+NMO.HTL.AMT.HTR,849,Amenities orgánicos diseñados a medida
+NMO.HTL.AMT.HTR,850,Audio con canales FM
+NMO.HTL.AMT.HTR,851,Apertura electrónica de puerta
+NMO.HTL.AMT.HTR,853,Baño de inmersión
+NMO.HTL.AMT.HTR,854,Baño privado con bañadera
+NMO.HTL.AMT.HTR,855,Batas de baño y pantuflas
+NMO.HTL.AMT.HTR,856,Batas y linens de lujo
+NMO.HTL.AMT.HTR,857,Blanquería en los baños
+NMO.HTL.AMT.HTR,858,Botella de agua gratuita
+NMO.HTL.AMT.HTR,859,Cafetera Nespresso
+NMO.HTL.AMT.HTR,860,Caja de seguridad digital
+NMO.HTL.AMT.HTR,861,Caja de seguridad individual
+NMO.HTL.AMT.HTR,864,Calefacción por loza radiante
+NMO.HTL.AMT.HTR,869,Cerramiento Termoacústico
+NMO.HTL.AMT.HTR,873,Closet recibidor
+NMO.HTL.AMT.HTR,876,Comedor
+NMO.HTL.AMT.HTR,878,Crema para el cuerpo
+NMO.HTL.AMT.HTR,879,Detectores de Humo
+NMO.HTL.AMT.HTR,882,Edredón Nórdico y lencería de alta calidad
+NMO.HTL.AMT.HTR,883,Equipamiento gastronómico de alta gama
+NMO.HTL.AMT.HTR,886,Estudio
+NMO.HTL.AMT.HTR,889,Gorra de Baño
+NMO.HTL.AMT.HTR,894,Hidromasaje
+NMO.HTL.AMT.HTR,895,Hidromasaje en la suite
+NMO.HTL.AMT.HTR,896,Hogar a Leña
+NMO.HTL.AMT.HTR,897,Home Theatre
+NMO.HTL.AMT.HTR,900,Impresora
+NMO.HTL.AMT.HTR,903,Jabones
+NMO.HTL.AMT.HTR,904,Caja fuerte para portátiles
+NMO.HTL.AMT.HTR,905,Limpia zapatos
+NMO.HTL.AMT.HTR,906,Living
+NMO.HTL.AMT.HTR,909,Maquina de cafe Nespresso
+NMO.HTL.AMT.HTR,912,Mini-bar y Selección de vinos boutique
+NMO.HTL.AMT.HTR,917,Periódico del día
+NMO.HTL.AMT.HTR,920,Platos
+NMO.HTL.AMT.HTR,925,Ropa de cama y baño de alta calidad
+NMO.HTL.AMT.HTR,926,Sabanas de algodón egipcio de 360 hilos
+NMO.HTL.AMT.HTR,930,Salamandra
+NMO.HTL.AMT.HTR,934,Scanner
+NMO.HTL.AMT.HTR,949,TV LCD
+NMO.HTL.AMT.HTR,951,TV LCD en cada ambiente
+NMO.HTL.AMT.HTR,952,"TV LED 40"""
+NMO.HTL.AMT.HTR,953,Vajilla Completa
+NMO.HTL.AMT.HTR,954,Valet
+NMO.HTL.AMT.HTR,957,Video
+NMO.HTL.AMT.HTR,960,Vista a la Montaña
+NMO.HTL.AMT.HTR,961,Vista al Bosque
+NMO.HTL.AMT.HTR,962,Vista al Lago
+NMO.HTL.AMT.HTR,963,Vista al Mar
+NMO.HTL.AMT.HTR,964,Vista panorámica al Lago Argentino
+NMO.HTL.AMT.HTR,967,Wi-Fi sin cargo
+NMO.HTL.AMT.HTT,1,Hotel de ciudad
+NMO.HTL.AMT.HTT,2,Hotel de playa
+NMO.HTL.AMT.HTT,3,Aparthotel
+NMO.HTL.AMT.HTT,4,Complejo de apartamentos
+NMO.HTL.AMT.HTT,5,Complejo de bungalows
+NMO.HTL.AMT.HTT,6,Pensión / Hostal
+NMO.HTL.AMT.HTT,7,Casa rural
+NMO.HTL.AMT.HTT,8,Resort
+NMO.HTL.AMT.HTT,9,Recinto vacacional
+NMO.HTL.AMT.HTT,10,Finca
+NMO.HTL.AMT.HTT,11,Complejo Spa
+NMO.HTL.AMT.HTT,12,Hotel golf
+NMO.HTL.AMT.HTT,13,Casino
+NMO.HTL.AMT.HTT,14,Hotel de aeropuerto
+NMO.HTL.AMT.HTT,15,Hotel de negocios
+NMO.HTL.AMT.HTT,16,Hotel ecológico
+NMO.HTL.AMT.HTT,17,Hotel histórico
+NMO.HTL.AMT.HTT,18,Hotel de conferencias
+NMO.HTL.AMT.HTT,19,Albergue
+NMO.HTL.AMT.HTT,20,Hotel romántico
+NMO.HTL.AMT.HTT,21,Hotel de esquí
+NMO.HTL.AMT.HTT,22,Hotel ideal para familias
+NMO.HTL.AMT.HTT,23,Hotel Temático
+NMO.HTL.AMT.HTT,24,Hotel de Diseño
+NMO.HTL.AMT.LOC,1,En la carretera principal
+NMO.HTL.AMT.LOC,2,Año de construcción
+NMO.HTL.AMT.LOC,3,Año de última reforma
+NMO.HTL.AMT.LOC,4,Edificio anexo
+NMO.HTL.AMT.LOC,5,Número de pisos (edificio principal)
+NMO.HTL.AMT.LOC,6,Número de pisos (edificio anexo)
+NMO.HTL.AMT.LOC,7,Número total de habitaciones
+NMO.HTL.AMT.LOC,8,Habitaciones individuales
+NMO.HTL.AMT.LOC,9,Habitaciones dobles
+NMO.HTL.AMT.LOC,10,Junior Suites
+NMO.HTL.AMT.LOC,11,Suites
+NMO.HTL.AMT.LOC,12,Apartamentos
+NMO.HTL.AMT.LOC,13,Estudios
+NMO.HTL.AMT.LOC,14,Bungalows
+NMO.HTL.AMT.LOC,15,Villas
+NMO.HTL.AMT.LOC,16,Habitaciones para minusválidos
+NMO.HTL.AMT.LOC,17,Jardín
+NMO.HTL.AMT.LOC,18,Terraza
+NMO.HTL.AMT.MOP,1,American Express
+NMO.HTL.AMT.MOP,2,EC-Card
+NMO.HTL.AMT.MOP,3,JCB
+NMO.HTL.AMT.MOP,4,Diners
+NMO.HTL.AMT.MOP,5,Mastercard
+NMO.HTL.AMT.MOP,6,Tarjeta Visa
+NMO.HTL.AMT.POI,1,Punto de interés 1
+NMO.HTL.AMT.POI,2,Punto de interés 2
+NMO.HTL.AMT.POI,3,Punto de interés 3
+NMO.HTL.AMT.POI,4,Punto de interés 4
+NMO.HTL.AMT.POI,5,Punto de interés 5
+NMO.HTL.AMT.PSE,1,WiFi
+NMO.HTL.AMT.PSE,2,Internet de alta velocidad
+NMO.HTL.AMT.PSE,3,Lavandería y tintorería
+NMO.HTL.AMT.PSE,4,Estacionamiento techado
+NMO.HTL.AMT.PSE,5,Agencia de viajes y turismo
+NMO.HTL.AMT.PSE,6,Joyería
+NMO.HTL.AMT.PSE,7,Florería
+NMO.HTL.AMT.PSE,8,Doctor disponible las 24 hs.
+NMO.HTL.AMT.PSE,9,Cambio de divisas
+NMO.HTL.AMT.PSE,10,Spa
+NMO.HTL.AMT.PSE,11,Servicio de niñera
+NMO.HTL.AMT.PSE,12,Gimnasio
+NMO.HTL.AMT.PSE,13,Cancha de golf / tenis
+NMO.HTL.AMT.PSE,14,Deportes acuáticos motorizados
+NMO.HTL.AMT.SPO,1,Gimnasio
+NMO.HTL.AMT.SPO,2,Wellness Center
+NMO.HTL.AMT.SPO,3,Fitness Center
+NMO.HTL.AMT.SPO,4,Cancha de Polo
+NMO.HTL.AMT.SPO,5,Tenis
+NMO.HTL.AMT.SPO,6,Futbol
+NMO.HTL.AMT.SPO,7,Voley
+NMO.HTL.AMT.SPO,8,Ski
+NMO.HTL.AMT.SPO,9,Paddle
+NMO.HTL.AMT.SPO,10,Deportes acuáticos
+NMO.HTL.AMT.SPO,821,Kayaks
+NMO.HTL.AMT.SPO,822,Stretching

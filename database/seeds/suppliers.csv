@@ -1,0 +1,379 @@
+supplier_code,name
+A4G,All4Go-Legacy
+AB2,Abreu Online-Legacy
+AB3,Abreu Online
+ABE,AllBeds
+AEX,American Executive
+AG2,All4Go
+AIC,AICTravelGroup
+ALL,Hotel Directo
+AMR,Inclusive Collection
+ARL,Arles
+ATI,Americantours
+ATP,AlliedTPro
+BA2,HotelBeds
+BAH,Bahia Principe
+BAP,HotelBeds Apitude-Legacy
+BBR,Blue Bay Resorts
+BCT,Barceló Hotels
+BDC,Barceló de Cuba
+BDR,Blue Diamond Caribe
+BLV,Belive
+BOL,HotelBeds-Legacy
+BON,Bonotel
+BPA,Bedsopia
+BTU,BTU
+BWT,Best Western
+CAT,Catalonia
+CEL,Celebration
+CIT,CityTours
+CNL,Convencional
+CNV,Convencional-Legacy
+CO2,Coming2
+CRT,BookMe Maldives
+CSB,CosmoBeds
+CYN,Cynsa
+DEC,Decameron
+DID,Dida
+DOW,Webbeds
+DT2,DTS
+DVG,Dio Viagens
+EAN,Expedia Affiliate Network-Legacy
+EHX,EHotelXML
+ERB,Euro Beds
+EVE,Evecon
+EVR,Everrooms
+EX2,Expedia
+EZK,EZLink
+EZL,EZLink-Legacy
+FSP,Fast Pay
+GAR,Priceline
+GLX,Galaxy
+GMT,GM Travel
+GO2,Yanolja Go Global
+GOG,GoGlobal-Legacy
+GRN,GRN
+H10,Ocean H10
+HAV,Havanatur-Legacy
+HD2,HotelDo BestDay-Legacy
+HD3,HotelDo
+HDB,HyDBuzios
+HE1,Blue Diamond Cuba
+HE2,Roc Hotels Cuba by HoteTec
+HE3,Gaviota Cuba by HoteTec
+HFU,Hotelfusion
+HP2,Hotels Pro-Legacy
+HP3,Hotels Pro
+HPG,Hyperguest
+HTU,Hotusa
+HYD,HyDBuzios-Legacy
+I01,Methabook
+I02,Sololé
+IBC,Iberostar Cuba
+IBE,Iberostar PUSH
+IBP,Iberostar Caribe
+IMP,Imperatore
+INF,Infinitas
+J10,Freeway-Legacy
+J11,Gowaii
+J12,Lots of Hotel
+J13,Panamericana de Viajes-Legacy
+J14,Wand3r-Legacy
+J15,American Executive-Legacy
+J16,Viajes Pacífico-Legacy
+J17,Escalabeds-Legacy
+J18,Itaparica-Legacy
+J20,Consolid
+J21,Daniel Reyes
+J22,American Executive Argentina
+J23,Destination Italia
+J24,North America Destinations
+J25,Nexus Tours
+J28,Portimar
+J29,BookoRooms-Legacy
+JN0,Action Travel-Legacy
+JN2,Kaluah-Legacy
+JN3,Sentinel
+JN4,Bookohotel-Legacy
+JN7,W2M-Legacy
+JN8,JJ Tours
+JN9,Methabook Juniper-Legacy
+JOU,Journeys
+JPR,Juniper JP
+JUM,Jumbonline
+KOL,Kolor Travel
+KUT,Rakuten Hotels Online
+LCB,LowcostBeds
+LOP,Lopesan
+M10,Iberostar-Legacy
+M11,Lares
+M12,Alvarez Arguelles
+M13,Bluediamond-Legacy
+M14,Ctm Tours
+M15,Dcom Travel
+M16,Das Americas
+M17,Alto Perfil
+M18,Solvera
+M19,Lagos del Calafate
+M20,Catalonia-Legacy
+M21,Mundo Viajes-Legacy
+M22,Divi Resorts (GAT)
+M23,Representaciones Villegas &amp; Alvarez Ltda
+M24,Rochester Hoteles
+M25,Tailorbeds-Legacy
+M26,Dorado Plaza
+M27,Velas Resorts
+M28,Via Capi extra
+M29,All Destiny
+M30,Resort La Torre
+M31,All Seasons
+M32,MyBeds Internacional
+M33,Karisma Hotels Latam
+M34,Tourmed-Legacy
+M36,Puerto Norte Design Hotel
+M37,The Reef
+M38,HighStar Hotel
+M39,Domireps
+M40,Sistema Moderno de Viajes
+M41,MyBeds Argentina
+M42,Decameron UY
+M43,Tourmundial
+M44,Te Acerco Brasil
+M45,ABTours
+M46,Planet Travel
+M47,Hover
+M48,Lares
+M49,Found Trip
+M50,Check In
+M51,Viva Enjoy
+M52,Evecon Hotels
+M53,Trayecto Uno
+M54,Costa do Santinho
+M55,DTP Hotels
+M56,Personal Hotels
+M57,NTT Nacional
+M58,Tropical Sky Travel
+M59,Aguas Grandes
+M60,Omnibees extra
+M61,Viajow
+M62,Rotamund
+M63,Brazil Code
+M64,Liberty
+M65,Eurowelcome
+M66,Petty International
+M67,Tailorbeds Euros
+M68,Viajes Pacífico
+M69,Nexo Escalabeds
+M70,Nexo Ezlink
+M71,Nexo Smyrooms
+M72,Nexo Methabook
+M73,Nexo Catalonia
+M74,Costa do Sol Destination
+M75,Nexo Serenade
+M76,Nexo Restel
+M77,Bookowow
+M78,Nexo Full of Dreams
+M79,Nexo HYD
+M80,Nexo Sistema Moderno de Viajes
+M81,Maratón Viajes
+M82,Nexo Galaxy Vacations
+M83,Nexo Panamericana de Viajes
+M84,Nexo OTS Globe
+M85,Nexo Abreu
+M86,Nexo Solvera
+M87,Nexo Tourmed
+M88,Nexo All4Go
+M89,Nexo Rakuten
+M90,Nexo Go Global
+M91,Nexo Action Travel
+M92,Nexo Portimar
+M93,Nexo Journeys
+M94,Nexo AIC
+M95,Costa do Sol Destination
+M96,Nexo Welcomebeds
+M97,Nexo American Executive
+M98,Nexo Imperatore
+M99,Nexo Sololé
+MAB,Mais Brasil
+MAJ,Full of Dreams
+MB2,MyBeds
+MED,Tourmed
+MGM,MGM
+MGO,MyGo
+MHS,Muthu Hotels
+MKT,Mark Travel
+MLC,Meliá Cuba
+MM1,CL Mundo
+MM2,Decameron AR
+MM3,MDC Argentina
+MM4,GoTravelRes Argentina
+MM6,Aadesa
+MM7,Arco Iris
+MM8,EB Group
+MM9,NTT
+MOC,The Global Travel
+MPC,Meeting Point Cuba
+MTB,Methabook-Legacy
+MTP,Meeting Point
+MYB,MyBeds-Legacy
+MYG,MyBeds Channel-Legacy
+N10,Nexo All Beds
+N11,ARKBEDS
+N12,Nexo TBO Holidays
+N13,Nexo Tuno
+N14,Nexo Prime Travel
+N15,Nexo Yalago
+N16,NEXO
+N17,Nexo Bookopro
+N18,Nexo Kaluah
+N19,Nexo RTS
+N20,Nexo Hyperguest
+N21,ADSMUNDO
+N22,Nexo Hotelbeds
+N23,Planet
+N24,Nexo Itaparica
+N25,Ovoly Group
+N26,Nexo Ocean H10
+N27,Nexo American Tours
+N28,Nexo Quality Travel
+N29,Nexo RIU
+N30,MITIKA TRAVEL
+N31,Nexo W2M
+N32,Prueba Mamushka
+N33,Itaparica extra
+N34,The travel Store Hoteles
+N35,Nexo Webbeds
+N36,Nexo Dida
+N37,Wander Travel
+N38,Nexo Nordbeds
+N39,Mexitours Hoteles
+N40,Estuario del Plata
+N41,Nexo Eurobeds
+N42,Rol Sol
+N43,Nexo The Travel Store
+N44,Nexo Check In
+N45,Nexo OTSI
+N46,Decameron PY
+N47,Restec hoteles
+N48,Nexo Wander Travel
+N49,Gimatur
+N50,Nexo Coming 2
+N51,Nexo Viva Resorts
+N52,Nexo Bahía Príncipe
+N53,Nexo Blue Diamond
+N54,Nexo Omnibees
+N55,Tower
+N56,BaiBai
+N57,Allreps
+N58,Nexo Travco
+N59,Nexo Dcom Travel
+N60,Nexo Infitinitas
+N61,Nexo Alturabeds
+N62,ACT
+N63,BeeDmc
+N64,Nexo Brazil Code
+N65,Vive Frida
+N66,Nexo Alto Perfil
+N67,Nexo Vive Mexico
+N68,NEXO A1
+N69,Tower Incoming
+N70,Tribellomo
+N71,NEXO NUITEE
+N72,Havanatur
+N73,Nexo Sandos
+N74,Nexo Decameron
+N75,Caluch Viajes
+N76,Nexo Expedia
+N77,Tourmed Arg
+N78,Demo Nemo
+N79,Nexo Iberostar Caribe
+N80,Sevens UY
+NN1,Nexo Cosmobeds
+NN2,Nexo Price Travel
+NN3,Nexo Saltours
+NN4,Nexo Tailorbeds
+NN5,Nexo Via Capi
+NN6,Nexo Red Turística
+NN7,Nexo Luz Verde Cadenas
+NN8,Nexo Paximum
+NN9,Nexo Book Me Maldivas
+NT2,Nites
+NTE,Nites-Legacy
+NUT,Nuitee
+NXS,Nexus Tours JP
+OL2,Olympia
+OLP,Olympia Online
+OLY,Olympia-Legacy
+OMB,Omnibees-Legacy
+OMD,Omnibees
+OTS,OTS Globe
+PAL,Palladium
+PAX,Paximum
+PER,Personal
+PKP,PeakPoint
+PLR,Playa Resorts
+PRT,Price Travel-Legacy
+PT2,Price Travel
+QTT,QualityTravel-Legacy
+RA2,Rate Hawk
+RAK,Rate Hawk-Legacy
+RBT,Otsi
+RE2,Red Turistica
+RED,Red Turistica-Legacy
+RES,Restel-Legacy
+RIU,RIU
+RS2,Restel
+RTS,RTS
+SAL,Saltours
+SAN,Sandos
+SLE,Sololé-Legacy
+SM2,SmyRooms
+SMY,SmyRooms-Legacy
+SOL,Solvera-Legacy
+SPC,Serenade Punta Cana
+STM,Selectum
+TB3,TBO
+TBO,TBO-Legacy
+TC1,Travel Portal
+TC2,Master Group
+TE2,Team America
+TEA,Team America-Legacy
+TR7,Travco-Legacy
+TR8,Travco
+TRC,TravCoding
+TRM,Tourmind
+TRN,Trend
+TTL,TaleTravel
+VAL,Valentin Cuba
+VER,Mundo Viajes
+VIA,Via Capi-Legacy
+VIM,Vive Mexico
+VIR,Viva Resorts
+VPR,Viagens Promo
+VTS,Veturis
+WBT,WelcomeBeds
+WHL,Worldwide Hotel Link
+WTE,Within Earth
+WYN,Wyndham Alltra Playa del Carmen
+X01,Nord Beds
+X02,Dida-Legacy
+X03,CONEXTUR
+X04,MikiTravel
+X05,AlturaBeds
+X06,Moebius
+XVC,Via Capi
+YAL,Yalago
+YOU,Youtravel
+Z01,Tailorbeds
+Z02,Escalabeds
+Z03,Action Travel
+Z04,Stockhotels
+Z05,Bookopro
+Z06,Smile Holidays Kuwait
+Z07,Itaparica
+Z08,Freeway Rio
+Z09,Panamericana de Viajes
+Z10,Quality Travel
+Z11,Kaluah
+Z12,W2M
+Z13,Trip N Stay

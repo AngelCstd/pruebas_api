@@ -1,5 +1,16 @@
 # Nemo Group (Price Navigator) Hotel Web Services Specification
 
+## Interactive API documentation
+
+Start the service with `npm run start:dev`, then open [Swagger UI](http://localhost:3000/api/docs). The OpenAPI JSON is available at `http://localhost:3000/api/docs-json`. Use the configured `PORT` when it differs from 3000.
+
+The UI groups all 15 active endpoints under **Hotels** and **Catalogs**, with query parameters, request schemas, examples, and response statuses. Use **Try it out** with `provider=mock` for offline hotel requests; Nemo requests require supplier configuration. Search returns HTTP 201; the other active operations return HTTP 200 on success. Commented booking handlers remain disabled and are excluded from the specification.
+
+Swagger is configured in `src/main.ts`; controllers and DTOs own HTTP documentation metadata. Services, provider strategies, and XML adapters retain their existing responsibilities. `tests/swagger.test.js` verifies document generation, routes, tags, and nested request schemas without contacting a supplier.
+
+> [!IMPORTANT]
+> **Nemo rate limit: 10 requests / 10 seconds.** All upstream operations, including search, booking detail and cancellation, must share this budget. Coordinate callers across service instances; retries also consume requests. The adapter does not currently enforce this limit—provide shared throttling before production activation.
+
 ## 1. Executive & Technical Overview
 
 The **Nemo Group Price Navigator Hotel Web Service** is an enterprise-grade distribution and reservation platform designed to connect travel management companies, online travel agencies (OTAs), and tour operators to wholesale hotel inventories. 
@@ -603,3 +614,220 @@ The `TripProductID` operates as an immutable state token:
 2. **Locked / Verified**: Passed to `/catalog/product/validate`. If a price change occurs, a new `TripProductID` may be returned in the response which must supersede the previous ID.
 3. **Priced**: Passed to `/booking/cancellation/fees` to verify legal cancellation penalties.
 4. **Consumed**: Passed to `/catalog/product/book`. Once successfully booked, the `TripProductID` transitions to consumed and cannot be reused. Any subsequent booking attempt using the same ID will result in `5020` or `5010`.
+
+---
+
+## 9. Master Catalog REST API Endpoints (`/catalogs/*`)
+
+To eliminate hardcoded magic strings and empower client interfaces (filtering by meal plan, amenities, room type, or wholesale supplier), the service exposes master dictionary endpoints based on Section 3.1 code tables.
+
+| Method | Endpoint | Query Parameters | Description | Source |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/catalogs/room-types` | None | Returns standard room types (`SGL`, `DBL`, `TPL`, `QUA`, etc.) with max adults capacity. | Table 9 |
+| `GET` | `/catalogs/board-types` | None | Returns meal plan regimes (`1: Sólo alojamiento`, `2: Con desayuno`, `7: Todo incluido`). | Table 15 |
+| `GET` | `/catalogs/amenity-groups` | None | Returns the 14 main amenity categories (`SER`, `BCH`, `FCL`, `SPO`, `POI`). | Table 1 |
+| `GET` | `/catalogs/amenities` | `page`, `limit`, `sortOrder`, `groupCode`, `groupCodes`, `codes`, `search` | Returns a filtered page of hotel amenities (895 total records). | Table 16 / CSV |
+| `GET` | `/catalogs/suppliers` | `page`, `limit`, `sortOrder`, `codes`, `search` | Returns a filtered page of suppliers (378 total records). | Table 19 / CSV |
+| `GET` | `/catalogs/accommodation-types` | `page`, `limit`, `sortOrder`, `codes`, `search` | Returns a filtered page of accommodation categories (95 total records). | Table 4 / CSV |
+| `GET` | `/catalogs/booking-statuses` | None | Returns all reservation lifecycle states (`CNF`, `CAN`, `PEN`, `CAC`). | Table 3 |
+| `GET` | `/catalogs/passenger-document-types` | None | Returns passenger legal document types (`DNI`, `PAS`, `CED`, `CDL`). | Table 10 |
+| `GET` | `/catalogs/cancellation-fee-types` | None | Returns penalty fee categories (`CAN`, `NSW`, `AMD`). | Table 8 |
+| `GET` | `/catalogs/star-ratings` | None | Returns star rating equivalences and numeric values (1.0 to 6.0). | Table 2 |
+
+
+### Pagination and combined filters
+
+Amenities, suppliers, and accommodation types return `PaginatedResult<T>` instead
+of an array. Other catalog endpoints continue to return arrays.
+
+| Parameter | Default | Behavior |
+| :--- | :--- | :--- |
+| `page` | `1` | Positive safe integer, starting at 1. |
+| `limit` | `20` | Integer from 1 to 100. |
+| `sortOrder` | `ASC` | `ASC` or `DESC`, sorting lexicographically by code. Equal codes retain seed order. |
+| `search` | omitted | Trimmed, case-insensitive substring of code or description (supplier name). Blank search does not filter. |
+| `codes` | omitted | Comma-separated, case-sensitive exact codes; whitespace is trimmed and empty entries ignored. An empty list matches no records. |
+| `groupCode` | omitted | Amenities only: trimmed, case-insensitive exact group. Blank value does not filter. |
+| `groupCodes` | omitted | Amenities only: comma-separated, case-insensitive exact groups. An empty list matches no records. |
+
+Different filters combine with AND; entries within a list combine with OR.
+If both group parameters are supplied, both must match. Amenity codes can repeat
+across groups; include a group filter when selecting a specific group's amenities.
+Invalid pagination, unsupported sort orders, or repeated query parameters return HTTP 400.
+
+Example: `GET /catalogs/suppliers?codes=BA2,EX2,DOW&page=1&limit=1&sortOrder=ASC`
+
+```json
+{
+  "data": [{ "code": "BA2", "name": "Supplier name from catalog" }],
+  "total": 3,
+  "page": 1,
+  "limit": 1,
+  "totalPages": 3
+}
+```
+
+The supplier name above is illustrative. `total` counts matching records before
+pagination; `totalPages` is `ceil(total / limit)`. No matches return `data: []`,
+`total: 0`, and `totalPages: 0`. Pages past the end return an empty `data` array
+while preserving the requested page and matching totals.
+
+Combined amenity query:
+`GET /catalogs/amenities?groupCodes=MNO.HTL.AMT.SER,NMO.HTL.AMT.BCH&codes=820,821,822&search=pool&page=1&limit=20`
+
+### 9.1 Planned Locations & Destinations API Contract (`GET /locations/search`)
+
+For fast autocomplete/typeahead on frontend search bars, destinations are designed to be served directly from PostgreSQL using the table `hotel_destinations`:
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `query` | `string` | Yes | Search term (min. 2 chars). Matches destination name with fuzzy/trigram tolerance. |
+| `types` | `string` | No | Comma-separated destination types (e.g. `CTY,ARE,AIR`). Default: `CTY,ARE`. |
+| `countryCode` | `string` | No | ISO 2-letter country code filter (e.g. `MX`, `ES`, `US`). |
+| `lat`, `lng` | `number` | No | Latitude and Longitude for proximity ordering. |
+| `radiusKm` | `number` | No | Search radius in kilometers (requires `lat` and `lng`). |
+| `limit` | `number` | No | Max suggestions returned (default: 10, max: 30). |
+
+#### Target PostgreSQL Schema & Indexing:
+```sql
+CREATE TABLE hotel_destinations (
+  destination_id VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  country_code VARCHAR(10),
+  country_name VARCHAR(150),
+  type VARCHAR(50) NOT NULL,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Fast Trigram index for sub-10ms autocomplete search
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_destinations_name_trgm ON hotel_destinations USING gin (name gin_trgm_ops);
+CREATE INDEX idx_destinations_type ON hotel_destinations (type);
+CREATE INDEX idx_destinations_country ON hotel_destinations (country_code);
+```
+
+#### Example Response Contract:
+```json
+{
+  "query": "cancun",
+  "totalMatches": 2,
+  "data": [
+    {
+      "destinationId": "2262",
+      "name": "Cancún",
+      "type": "NMO.HTL.DST.CTY",
+      "typeLabel": "Ciudad",
+      "countryCode": "MX",
+      "countryName": "México"
+    },
+    {
+      "destinationId": "5891",
+      "name": "Cancún - Zona Hotelera",
+      "type": "NMO.HTL.DST.ARE",
+      "typeLabel": "Zona",
+      "countryCode": "MX",
+      "countryName": "México"
+    }
+  ]
+}
+```
+
+## 10. Implemented Rate Lifecycle REST Endpoints
+
+Both endpoints accept `{"tripProductId":"<ID returned by search>"}` and return HTTP 200.
+Use `?provider=mock` (default) or `?provider=nemo`. Missing, blank, non-string IDs,
+unknown body properties, and unsupported providers return HTTP 400.
+
+| Endpoint | Nemo upstream operation | Response fields |
+| --- | --- | --- |
+| `POST /hotels/validate` | `/catalog/product/validate` (`AvailabilityValidationRQ/RS`) | `transactionId`, `provider`, `tripProductId`, `validatedPrice: { amount, currency, priceChanged }`, `availabilityStatus`, `rateStatus` |
+| `POST /hotels/cancellation-fees` | `/booking/cancellation/fees` (`CancellationFeesQueryRQ/RS`) | `transactionId`, `provider`, `tripProductId`, `currency`, optional `freeCancellationDeadline`, `feeSchedule` |
+
+Each fee tier contains `startDate`, optional `endDate`, `feeAmount`, and
+`penaltyPercentage`. An explicitly empty upstream fee schedule returns `[]`;
+a missing schedule or invalid monetary data returns HTTP 502. Always carry forward
+the returned `tripProductId`, because Nemo can replace the original identifier.
+
+Mock search results retain their prices and policies in memory for 30 minutes;
+restarting the service clears them. Refundable rates charge 50% from the cancellation
+deadline and 100% from check-in; non-refundable rates charge 100% immediately.
+`MOCK-EXP-001` returns HTTP 410, `MOCK-PRICE-002` returns a changed EUR 935 rate,
+and unknown IDs return HTTP 404. These fixture IDs work without running search first.
+
+Nemo uses `NEMO_BASE_URL` (default certification URL) and `NEMO_AUTH_TOKEN`.
+Run `npm test` for the build, in-process Nest HTTP route checks, XML transport fixtures,
+parser failure cases, and the source-level explicit `any` check. These tests require
+neither credentials nor network access; they do not certify live supplier connectivity.
+
+Catalog verification: the supplied seeds contain 895 amenities, 378 suppliers, and
+95 accommodation types. Amenity identity is the combination of `groupCode` and `code`.
+The group dictionary includes `NMO.HTL.AMT.CAT` (restauración), giving 14 groups.
+The seed spelling `MNO.HTL.AMT.SER` is preserved. Deploy `database/seeds` alongside
+`dist`; missing or invalid seeds fail startup instead of returning empty catalogs.
+
+## Hotel content endpoints (implemented)
+
+Both routes default to `provider=mock`; use `provider=nemo` for the supplier.
+Unknown query parameters and invalid or repeated scalar values return HTTP 400.
+
+| Route | Query | Result |
+| --- | --- | --- |
+| `GET /hotels/:hotelCode/details` | `language` defaults to `es` (two-letter code, optionally a region such as `es-MX`); `provider=mock\|nemo` | `hotelCode`, `description`, `checkInTime`, `checkOutTime`, `amenities: {code,name}[]`, `images: {category,url}[]` |
+| `GET /hotels/catalog` | Required nonblank `destinationCode`; `activeOnly=true\|false` defaults to `true`; `provider=mock\|nemo` | `destinationCode`, `destinationName`, `hotelCount`, `hotels: {hotelCode,hotelName,rating,latitude,longitude,city,country}[]` |
+
+```sh
+curl 'http://localhost:3000/hotels/catalog?destinationCode=2262&activeOnly=true&provider=mock'
+curl 'http://localhost:3000/hotels/MOCK-2262-001/details?provider=mock&language=es'
+```
+
+Mock catalog returns two active properties and one additional inactive property
+when `activeOnly=false`. Coordinates and destination labels are Madrid offline
+fixtures, not live destination mappings. Details accept the mock catalog/search
+hotel codes; Spanish and English descriptions are available (other valid language
+codes fall back to English). Image URLs reference illustrative Unsplash photos;
+the service does not download them or require network access for mock responses.
+
+Nemo uses the XML examples in sections 6.6 and 6.7 with
+`POST /catalog/product/detail` and `POST /catalog/hotels/list` respectively.
+Supplier errors use the existing HTTP error mapping; malformed content returns 502.
+
+### Booking preparation — route disabled
+
+`POST /hotels/book?provider=mock|nemo` is intentionally **not registered** and
+returns 404. A complete commented handler is in `src/controllers/hotel.controller.ts`.
+The service, strategies, XML builder and parser are implemented. Nemo submits
+`BookingProductsRQ` to `/catalog/product/book`, with `PaymentDetails Method="CreditLimit"`.
+No automatic retry is performed.
+
+The prepared JSON body is:
+
+```json
+{
+  "tripProductId": "ID_FROM_SEARCH_OR_VALIDATION",
+  "clientReference": "BOOK-CLT-778899",
+  "leadPassenger": {
+    "title": "MR", "firstName": "Carlos", "lastName": "Mendez",
+    "email": "carlos@example.com", "phone": "+34611223344"
+  },
+  "rooms": [{
+    "roomSequence": 1,
+    "guests": [{ "title": "MR", "firstName": "Carlos", "lastName": "Mendez", "type": "ADT" }],
+    "specialRequests": "Quiet room if available"
+  }]
+}
+```
+
+Names and references must be nonblank and bounded in length. Lead contact fields
+require a valid email and international phone number. Supply 1–8 uniquely numbered
+rooms, each with 1–8 guests; guest types are `ADT`, `CHD`, `INF`. Non-adults require
+an integer age from 0–17. Unknown nested fields are rejected by the validation pipe.
+The result contains `bookingLocator`, `supplierConfirmationCode`, `clientReference`,
+`creationDate`, `bookingStatus`, `totalPrice: {amount,currency}` and
+`hotelInformation: {hotelCode,hotelName,checkIn,checkOut}`. Mock booking requires
+an unexpired product from a mock search and does not create a supplier reservation.
+
+To activate in a new repository or production, follow the controller block comment:
+configure supplier credentials and credit-limit access, verify the booking contract,
+review authentication and duplicate-submission handling, then uncomment the handler.

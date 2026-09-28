@@ -28,6 +28,8 @@ export interface AvailabilityQueryRQ extends NemoXmlAttributes {
       readonly Availability: 'CNF';
       readonly HotelName?: string;
       readonly Ratings?: string;
+      readonly HotelCodeList?: string;
+      readonly BoardTypes?: string;
     };
   };
   readonly Passengers: { readonly Passenger: readonly NemoPassengerRequest[] };

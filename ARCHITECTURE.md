@@ -1,5 +1,16 @@
 # System Architecture Specification: Hotel Provider Service
 
+## Interactive API documentation
+
+Start the service with `npm run start:dev`, then open [Swagger UI](http://localhost:3000/api/docs). The OpenAPI JSON is available at `http://localhost:3000/api/docs-json`. Use the configured `PORT` when it differs from 3000.
+
+The UI groups all 15 active endpoints under **Hotels** and **Catalogs**, with query parameters, request schemas, examples, and response statuses. Use **Try it out** with `provider=mock` for offline hotel requests; Nemo requests require supplier configuration. Search returns HTTP 201; the other active operations return HTTP 200 on success. Commented booking handlers remain disabled and are excluded from the specification.
+
+Swagger is configured in `src/main.ts`; controllers and DTOs own HTTP documentation metadata. Services, provider strategies, and XML adapters retain their existing responsibilities. `tests/swagger.test.js` verifies document generation, routes, tags, and nested request schemas without contacting a supplier.
+
+> [!IMPORTANT]
+> **Nemo rate limit: 10 requests / 10 seconds.** All upstream operations, including search, booking detail and cancellation, must share this budget. Coordinate callers across service instances; retries also consume requests. The adapter does not currently enforce this limit—provide shared throttling before production activation.
+
 ## 1. Executive Summary for Leadership
 
 The **Hotel Provider Service** is an enterprise-grade backend service architected to standardize, decouple, and orchestrate hotel inventory distribution across heterogeneous upstream travel wholesalers.
@@ -148,6 +159,28 @@ export class HotelStrategyFactory {
   }
 }
 ```
+
+### 3.4 The Repository Pattern Architecture: Master Catalogs & Dictionaries
+To isolate static business codes, wholesale provider mappings, and hotel amenities from application services, data access lives behind interfaces (`ICatalogRepository` + token `CATALOG_REPOSITORY`), matching the architectural conventions in `CLAUDE.md`:
+
+```mermaid
+flowchart LR
+    Client[REST Client / Frontend] --> CatalogCtrl[CatalogController]
+    CatalogCtrl --> CatalogSvc[CatalogService]
+    CatalogSvc -->|Injected via CATALOG_REPOSITORY| RepoI[ICatalogRepository Interface]
+    RepoI --> LocalRepo[LocalCatalogRepository\nIn-Memory + CSV Seeds]
+    RepoI -.->|Production Ready Swap| PrismaRepo[PrismaCatalogRepository\nPostgreSQL]
+```
+
+#### Dual Operational Modes:
+1. **In-Memory & Offline Development (`LocalCatalogRepository`)**:
+   - Actively bound by default in `CatalogModule`.
+   - Preloads strongly typed TypeScript domain constants (`RoomType`, `BoardType`, `BookingStatus`, `PassengerDocumentType`, `StarRatings`).
+   - Parses seed CSV files (`database/seeds/amenities.csv`, `suppliers.csv`, `accommodations.csv`) on startup, requiring **zero running databases** during development and unit testing.
+2. **PostgreSQL Production Mode (`PrismaCatalogRepository`)**:
+   - To connect to a live Postgres database, developers simply implement `ICatalogRepository` over Prisma/TypeORM and update the provider binding in `CatalogModule` (`useClass: PrismaCatalogRepository`).
+3. **Large-Scale Destinations Database**:
+   - High-volume geographic datasets (e.g. `Destination_ES.zip` from Section 3.2 of Price Navigator) are intentionally excluded from the code repository. They are designated for ingestion into a dedicated `hotel_destinations` database table with full-text search and spatial indexes.
 
 ---
 
@@ -649,3 +682,80 @@ export function mapNemoErrorToHttp(nemoCode: number, message: string): HttpExcep
 - Every request passing through `HotelController` is assigned a unique `X-Correlation-ID`.
 - This correlation ID is mapped directly to the Nemo `TransactionId` in all XML headers.
 - Structured JSON logs (via Winston or Pino) capture execution latencies, supplier response times, and payload sizes, enabling OpenTelemetry and Datadog/Prometheus monitoring.
+
+### Implemented lifecycle slice
+
+`ValidateRateDto` and `CancellationFeesDto` validate the JSON request at the controller.
+`HotelService` resolves the query-selected provider through `HotelStrategyFactory`;
+both strategies implement the same typed response contracts in
+`domain/models/rate-lifecycle.model.ts`. Nemo delegates request building, shared HTTP
+transport, error mapping, and response parsing to the XML adapter components.
+Mock retains search-generated products in process for the 30-minute lifecycle.
+
+The current REST provider selector is `?provider=mock|nemo`, defaulting to Mock.
+Header routing, retries, rate limiting, booking operations, and the other future
+components described above are not implemented by this lifecycle slice.
+
+
+### Implemented catalog querying
+
+`CatalogController` accepts `QueryAmenitiesDto`, `QuerySuppliersDto`, and
+`QueryAccommodationsDto`. They extend `PaginationQueryDto`; the global transforming
+validation pipe converts numeric query strings and rejects invalid integers,
+limits outside 1–100, pages below 1 or above the safe integer range, and sort orders
+other than `ASC`/`DESC`. Defaults are page 1, limit 20, and ascending order.
+
+`CatalogService` forwards each typed query to `ICatalogRepository`. These three
+repository methods return `Promise<PaginatedResult<T>>`, containing readonly data,
+filtered total, page, limit, and totalPages. Other catalog contracts remain arrays.
+
+`LocalCatalogRepository` loads CSV seeds once, then applies exact comma-separated
+code lists, amenity group filters, and case-insensitive substring search using AND
+between criteria and OR within each list. Code lists are case-sensitive; group
+filters are case-insensitive. Both group parameters intersect when supplied. List
+entries are trimmed and empty entries ignored; an explicitly empty list matches
+nothing. Search covers code and description (or supplier name).
+
+A shared generic helper sorts a filtered copy lexicographically by code, preserving
+seed order for ties, and slices at `(page - 1) * limit` without mutating caches.
+Amenity codes are unique within groups, so code-only queries may span groups.
+Totals are calculated before slicing; empty results have zero totalPages and pages
+past the end preserve totals. Processing remains in memory over the full cache;
+pagination bounds response size. A future database repository should preserve this
+filtering, ordering, and pagination contract. Tests cover HTTP validation, complete
+catalog traversal, combined filters, code lists, ordering, and page boundaries.
+
+## Implemented hotel content and prepared booking
+
+The current content flow is `HotelController → HotelService → HotelStrategyFactory
+→ HotelProviderStrategy`. The strategy interface exposes `getHotelDetails`,
+`getHotelCatalog`, and `bookHotel`, returning domain result models without XML or
+transport objects. Query DTOs validate provider selection, language and the strict
+`true`/`false` catalog filter; `BookHotelDto` validates nested passengers and rooms.
+
+- `GET /hotels/:hotelCode/details` defaults to Spanish and mock provider.
+- `GET /hotels/catalog` requires `destinationCode` and defaults to active hotels.
+- `POST /hotels/book` has a complete commented controller handler and remains
+  unregistered. The service and provider operations are callable internally.
+
+`NemoHotelStrategy` delegates to `NemoXmlAdapter`, which reuses authenticated XML
+transport, timeout and error handling. `NemoXmlBuilder` owns AdditionalInfoQueryRQ,
+HotelCatalogQueryRQ and BookingProductsRQ serialization, including XML escaping.
+`NemoXmlParser` narrows unknown supplier data into domain models, normalizes XML
+collections, and validates numeric values, coordinates, times and booking amounts.
+The contracts follow the repository's API_DOCUMENTATION.md XML examples; tests
+use those examples and intercepted transport, not live supplier certification.
+
+`MockHotelStrategy` supplies offline descriptions, amenities, illustrative image
+URLs and an active/inactive hotel catalog. Mock search products retain hotel and
+stay information so prepared mock booking can return the searched hotel and price.
+The catalog uses Madrid fixture metadata for requested destination identifiers.
+
+Booking activation instructions live beside the commented handler. Activation
+requires configuring supplier credit-limit access and reviewing authentication
+and duplicate submissions. The implementation does not automatically retry booking.
+
+`tests/hotel-content.test.js` covers HTTP routes, query validation, mock behavior,
+Nemo transport and XML normalization, malformed responses, nested booking DTOs,
+XML escaping and the disabled booking route. The existing source AST test enforces
+zero explicit `any`, and TypeScript compilation enables `strict`/`noImplicitAny`.
