@@ -26,6 +26,9 @@ export interface HotelRate {
   readonly currency: string;
   readonly roomRates: readonly HotelRoomRate[];
   readonly cancellationPolicy: HotelCancellationPolicy;
+  /** Campos opcionales de enriquecimiento (solo el proveedor mock los rellena). */
+  readonly nights?: number;
+  readonly pricePerNight?: number;
 }
 
 export interface HotelItem {
@@ -36,6 +39,13 @@ export interface HotelItem {
   readonly latitude?: number;
   readonly longitude?: number;
   readonly rates: readonly HotelRate[];
+  /** Campos opcionales de enriquecimiento (solo el proveedor mock los rellena). */
+  readonly propertyType?: string;
+  readonly thumbnailUrl?: string;
+  readonly reviewScore?: number;
+  readonly reviewCount?: number;
+  readonly distanceToCenterKm?: number;
+  readonly amenities?: readonly string[];
 }
 
 export interface HotelSearchResult {

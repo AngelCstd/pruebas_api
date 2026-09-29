@@ -1,6 +1,6 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { SearchDestinationsDto } from '../domain/dtos/query-destinations.dto';
+import { DestinationLanguage, SearchDestinationsDto } from '../domain/dtos/query-destinations.dto';
 import { DestinationItem } from '../domain/models/destination.model';
 import { IDestinationRepository } from './destination.repository.interface';
 
@@ -50,6 +50,20 @@ export class SupabaseDestinationRepository implements IDestinationRepository {
       throw new ServiceUnavailableException('Destination catalog is temporarily unavailable.');
     }
     return (data ?? []).map((row) => this.toItem(row));
+  }
+
+  public async findById(destinationId: string, language: DestinationLanguage): Promise<DestinationItem | null> {
+    const { data, error } = await this.getClient()
+      .from(TABLE)
+      .select(COLUMNS)
+      .eq('destination_id', destinationId)
+      .eq('language_id', language)
+      .maybeSingle<DestinationRow>();
+    if (error) {
+      this.logger.error(`Destination lookup failed: ${error.message}`);
+      throw new ServiceUnavailableException('Destination catalog is temporarily unavailable.');
+    }
+    return data ? this.toItem(data) : null;
   }
 
   private getClient(): SupabaseClient {

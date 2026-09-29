@@ -10,17 +10,58 @@ import { BookingResult } from '../domain/models/booking.model';
 import { ValidateRateDto } from '../domain/dtos/validate-rate.dto';
 import { CancellationFeesDto } from '../domain/dtos/cancellation-fees.dto';
 import { RateValidationResult, CancellationFeesResult } from '../domain/models/rate-lifecycle.model';
-import { GoneException, NotFoundException, Injectable } from '@nestjs/common';
+import { GoneException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { SearchHotelsDto } from '../domain/dtos/search-hotels.dto';
 import { ProviderType } from '../domain/enums/provider.enum';
 import { HotelItem, HotelRate, HotelSearchResult } from '../domain/models/hotel.model';
+import { DESTINATION_REPOSITORY, IDestinationRepository } from '../repositories/destination.repository.interface';
 import { HotelProviderStrategy } from './hotel-provider.strategy';
+import {
+  FALLBACK_PLACE,
+  MOCK_HOTEL_CODE_PATTERN,
+  MockPlace,
+  MockRateTemplate,
+  amenityName,
+  buildDescription,
+  buildHotelProfiles,
+  buildPlace,
+  buildPolicies,
+  checkTimes,
+  roomFactor,
+  thumbnailUrl,
+} from './mock-hotel-fixtures';
 
 @Injectable()
 export class MockHotelStrategy implements HotelProviderStrategy {
   private readonly bookings = new Map<string, BookingDetailResult>();
   private readonly cancellations = new Map<string, BookingCancellationResult>();
   private readonly products = new Map<string, { rate: HotelRate; checkIn: string; createdAt: number; hotelInformation?: BookingResult['hotelInformation'] }>();
+  private readonly places = new Map<string, MockPlace>();
+
+  public constructor(
+    @Optional() @Inject(DESTINATION_REPOSITORY) private readonly destinations?: IDestinationRepository,
+  ) {}
+
+  /**
+   * Resuelve ciudad y país del destino desde el catálogo `hotel_destinations`.
+   * Si el catálogo no está disponible o el destino no existe, usa el fixture de Madrid.
+   */
+  private async resolvePlace(destinationId: string): Promise<MockPlace> {
+    const cached = this.places.get(destinationId);
+    if (cached) return cached;
+    try {
+      const item = await this.destinations?.findById(destinationId, 'es');
+      if (item) {
+        const city = item.city ?? item.label ?? 'Destino';
+        const place = buildPlace(destinationId, city, item.country ?? '', item.countryId ?? 'ES', item.label ?? city);
+        this.places.set(destinationId, place);
+        return place;
+      }
+    } catch {
+      // Catálogo no configurado o no disponible: el mock sigue funcionando offline.
+    }
+    return FALLBACK_PLACE;
+  }
 
   public async validateRate(dto: ValidateRateDto): Promise<RateValidationResult> {
     const { rate } = this.getProduct(dto.tripProductId);
@@ -69,7 +110,8 @@ export class MockHotelStrategy implements HotelProviderStrategy {
       if (Date.now() - product.createdAt >= 30 * 60_000) this.products.delete(id);
     }
     const nights = this.calculateNights(dto.checkIn, dto.checkOut);
-    const hotels = this.createHotels(dto, nights).filter((hotel) => {
+    const place = await this.resolvePlace(dto.destinationId);
+    const hotels = this.createHotels(dto, nights, place).filter((hotel) => {
       const nameMatches = dto.hotelName
         ? hotel.hotelName.toLowerCase().includes(dto.hotelName.toLowerCase())
         : true;
@@ -102,71 +144,46 @@ export class MockHotelStrategy implements HotelProviderStrategy {
     });
   }
 
-  private createHotels(dto: SearchHotelsDto, nights: number): HotelItem[] {
-    return [
-      {
-        hotelCode: `MOCK-${dto.destinationId}-001`,
-        hotelName: 'Grand Hotel Plaza',
-        rating: 5,
-        address: {
-          street: '120 Grand Avenue',
-          city: 'Madrid',
-          postalCode: '28046',
-          countryCode: 'ES',
-        },
-        latitude: 40.443912,
-        longitude: -3.690831,
-        rates: [
-          this.createRate(dto, 'Standard', 172.5 * nights, 'EUR', 'Bed & Breakfast', 'BB', true),
-          this.createRate(dto, 'NonRefundable', 148 * nights, 'EUR', 'Room Only', 'RO', false),
-        ],
-      },
-      {
-        hotelCode: `MOCK-${dto.destinationId}-002`,
-        hotelName: 'Hotel Resort & Spa',
-        rating: 4,
-        address: {
-          street: '8 Seaside Promenade',
-          city: 'Barcelona',
-          postalCode: '08003',
-          countryCode: 'ES',
-        },
-        latitude: 41.3851,
-        longitude: 2.1734,
-        rates: [
-          this.createRate(dto, 'Flexible', 139 * nights, 'EUR', 'Half Board', 'HB', true),
-          this.createRate(dto, 'AdvancePurchase', 121.5 * nights, 'EUR', 'Breakfast Included', 'BB', false),
-        ],
-      },
-    ];
+  private createHotels(dto: SearchHotelsDto, nights: number, place: MockPlace): HotelItem[] {
+    return buildHotelProfiles(dto.destinationId, place).map((profile) => ({
+      hotelCode: profile.hotelCode,
+      hotelName: profile.hotelName,
+      rating: profile.rating,
+      address: profile.address,
+      latitude: profile.latitude,
+      longitude: profile.longitude,
+      rates: profile.rateTemplates.map((template) => this.createRate(dto, template, nights, place.currency)),
+      propertyType: profile.propertyType,
+      thumbnailUrl: thumbnailUrl(profile),
+      reviewScore: profile.reviewScore,
+      reviewCount: profile.reviewCount,
+      distanceToCenterKm: profile.distanceToCenterKm,
+      amenities: profile.amenityCodes.slice(0, 5).map((code) => amenityName(code, 'es')),
+    }));
   }
 
-  private createRate(
-    dto: SearchHotelsDto,
-    rateClass: string,
-    amount: number,
-    currency: string,
-    boardDescription: string,
-    boardCode: string,
-    refundable: boolean,
-  ): HotelRate {
+  private createRate(dto: SearchHotelsDto, template: MockRateTemplate, nights: number, currency: string): HotelRate {
     const deadline = new Date(`${dto.checkIn}T00:00:00.000Z`);
     deadline.setUTCDate(deadline.getUTCDate() - 3);
+    const roomsFactor = dto.rooms.reduce((sum, room) => sum + roomFactor(room.roomType), 0);
+    const pricePerNight = Number((template.pricePerNight * roomsFactor).toFixed(2));
     const rate: HotelRate = {
       tripProductId: this.createId('MOCK_TRIP'),
-      rateClass,
-      amount: Number(amount.toFixed(2)),
+      rateClass: template.rateClass,
+      amount: Number((template.pricePerNight * roomsFactor * nights).toFixed(2)),
       currency,
       roomRates: dto.rooms.map((room) => ({
         roomSequence: room.roomSequence,
         roomType: this.roomLabel(room.roomType),
-        boardCode,
-        boardDescription,
+        boardCode: template.boardCode,
+        boardDescription: template.boardDescription,
       })),
       cancellationPolicy: {
-        refundable,
-        ...(refundable ? { deadline: deadline.toISOString() } : {}),
+        refundable: template.refundable,
+        ...(template.refundable ? { deadline: deadline.toISOString() } : {}),
       },
+      nights,
+      pricePerNight,
     };
     this.products.set(rate.tripProductId, { rate, checkIn: dto.checkIn, createdAt: Date.now() });
     return rate;
@@ -195,29 +212,38 @@ export class MockHotelStrategy implements HotelProviderStrategy {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
   }
   public async getHotelDetails(hotelCode: string, dto: QueryHotelDetailsDto): Promise<HotelDetailsResult> {
-    if (!/^MOCK-.+-(001|002|003)$/.test(hotelCode)) throw new NotFoundException('Mock hotel not found.');
-    const spanish = (dto.language ?? 'es').startsWith('es');
+    const match = MOCK_HOTEL_CODE_PATTERN.exec(hotelCode);
+    if (!match) throw new NotFoundException('Mock hotel not found.');
+    const [, destinationId, sequence] = match;
+    const language = (dto.language ?? 'es').toLowerCase().startsWith('es') ? 'es' : 'en';
+    const place = await this.resolvePlace(destinationId);
+    const profile = buildHotelProfiles(destinationId, place)[Number(sequence) - 1];
+    if (!profile) throw new NotFoundException('Mock hotel not found.');
     return {
       hotelCode,
-      description: spanish
-        ? 'Hotel de lujo con habitaciones luminosas, spa, piscina climatizada y restaurante de cocina mediterránea. Desayuno buffet y recepción disponibles todos los días.'
-        : 'Luxury hotel with bright rooms, a full-service spa, heated pool and Mediterranean restaurant. Daily buffet breakfast and a staffed reception.',
-      checkInTime: '15:00', checkOutTime: '12:00',
-      amenities: [{ code: 'WIFI', name: spanish ? 'Wi-Fi gratuito' : 'Free Wi-Fi' },
-        { code: 'SPA', name: 'Spa & Wellness' }, { code: 'POOL', name: spanish ? 'Piscina climatizada' : 'Heated pool' },
-        { code: 'PARK', name: spanish ? 'Aparcamiento privado' : 'Private parking' }],
-      images: [{ category: 'Exterior', url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600' },
-        { category: 'Room', url: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=1600' },
-        { category: 'Pool', url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=1600' }],
+      hotelName: profile.hotelName,
+      rating: profile.rating,
+      propertyType: profile.propertyType,
+      address: profile.address,
+      latitude: profile.latitude,
+      longitude: profile.longitude,
+      reviewScore: profile.reviewScore,
+      reviewCount: profile.reviewCount,
+      policies: buildPolicies(profile, language),
+      description: buildDescription(profile, place, language),
+      ...checkTimes(profile),
+      amenities: profile.amenityCodes.map((code) => ({ code, name: amenityName(code, language) })),
+      images: profile.images.map((image) => ({ ...image })),
     };
   }
 
   public async getHotelCatalog(dto: QueryHotelCatalogDto): Promise<HotelCatalogResult> {
-    const hotels = ['Grand Hotel Plaza', 'Hotel Resort & Spa', 'Historic Garden Hotel'].map((hotelName, index) => ({
-      hotelCode: `MOCK-${dto.destinationCode}-00${index + 1}`, hotelName, rating: index === 0 ? 5 : 4,
-      latitude: 40.443912 + index * 0.001, longitude: -3.690831 + index * 0.001, city: 'Madrid', country: 'ES',
+    const place = await this.resolvePlace(dto.destinationCode);
+    const hotels = buildHotelProfiles(dto.destinationCode, place).slice(0, 3).map((profile) => ({
+      hotelCode: profile.hotelCode, hotelName: profile.hotelName, rating: profile.rating,
+      latitude: profile.latitude, longitude: profile.longitude, city: place.city, country: place.countryCode,
     })).filter((_, index) => !(dto.activeOnly ?? true) || index < 2);
-    return { destinationCode: dto.destinationCode, destinationName: 'Madrid (offline fixture)', hotelCount: hotels.length, hotels };
+    return { destinationCode: dto.destinationCode, destinationName: place.label, hotelCount: hotels.length, hotels };
   }
 
   public async bookHotel(dto: BookHotelDto): Promise<BookingResult> {
