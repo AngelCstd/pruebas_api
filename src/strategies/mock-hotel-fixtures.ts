@@ -3,7 +3,9 @@ import { HotelAddress } from '../domain/models/hotel.model';
 /**
  * Fixtures deterministas del proveedor MOCK.
  * Los datos dependen solo del `destinationId`, por lo que una misma búsqueda siempre devuelve los mismos hoteles.
- * Las coordenadas de destinos distintos al fallback son ficticias (solo para demos).
+ * Solo genera campos que Nemo también entrega (código, nombre, estrellas, dirección, posición, tarifas,
+ * descripción, horarios, amenidades del catálogo oficial e imágenes). Las coordenadas de destinos
+ * distintos al fallback son ficticias (solo para demos).
  */
 
 export type MockLanguage = 'es' | 'en';
@@ -41,9 +43,6 @@ export interface MockHotelProfile {
   readonly address: HotelAddress;
   readonly latitude: number;
   readonly longitude: number;
-  readonly reviewScore: number;
-  readonly reviewCount: number;
-  readonly distanceToCenterKm: number;
   readonly amenityCodes: readonly string[];
   readonly images: readonly MockImage[];
   readonly rateTemplates: readonly MockRateTemplate[];
@@ -75,24 +74,23 @@ const EUR_COUNTRIES: ReadonlySet<string> = new Set([
   'ES', 'FR', 'IT', 'DE', 'PT', 'NL', 'BE', 'AT', 'IE', 'GR', 'FI', 'LU', 'MT', 'CY', 'SK', 'SI', 'EE', 'LV', 'LT', 'HR',
 ]);
 
+/** Códigos y nombres del catálogo oficial de amenidades de Nemo (database/seeds/amenities.csv, grupo FCL). */
 const AMENITY_NAMES: Readonly<Record<string, Readonly<Record<MockLanguage, string>>>> = {
-  WIFI: { es: 'Wi-Fi gratuito', en: 'Free Wi-Fi' },
-  AC: { es: 'Aire acondicionado', en: 'Air conditioning' },
-  PARK: { es: 'Aparcamiento privado', en: 'Private parking' },
-  REST: { es: 'Restaurante', en: 'Restaurant' },
-  GYM: { es: 'Gimnasio', en: 'Fitness center' },
-  POOL: { es: 'Piscina climatizada', en: 'Heated pool' },
-  BAR: { es: 'Bar y terraza', en: 'Bar & terrace' },
-  SPA: { es: 'Spa & Wellness', en: 'Spa & Wellness' },
-  ROOMSVC: { es: 'Servicio a la habitación 24h', en: '24h room service' },
-  AIRPORT: { es: 'Traslado al aeropuerto', en: 'Airport shuttle' },
+  '31': { es: 'Internet Inalámbrico', en: 'Wireless internet' },
+  '1': { es: 'Aire acondicionado en zonas comunes', en: 'Air conditioning in common areas' },
+  '39': { es: 'Aparcamiento', en: 'Parking' },
+  '24': { es: 'Restaurante', en: 'Restaurant' },
+  '60': { es: 'Gimnasio', en: 'Gym' },
+  '48': { es: 'Piscina climatizada', en: 'Heated pool' },
+  '14': { es: 'Bar', en: 'Bar' },
+  '217': { es: 'Spa', en: 'Spa' },
 };
 
 const AMENITIES_BY_RATING: Readonly<Record<number, readonly string[]>> = {
-  2: ['WIFI', 'AC', 'PARK', 'REST'],
-  3: ['WIFI', 'AC', 'PARK', 'REST', 'GYM'],
-  4: ['WIFI', 'AC', 'PARK', 'REST', 'GYM', 'POOL', 'BAR'],
-  5: ['WIFI', 'AC', 'PARK', 'REST', 'GYM', 'POOL', 'BAR', 'SPA', 'ROOMSVC', 'AIRPORT'],
+  2: ['31', '1', '39', '24'],
+  3: ['31', '1', '39', '24', '60'],
+  4: ['31', '1', '39', '24', '60', '48', '14'],
+  5: ['31', '1', '39', '24', '60', '48', '14', '217'],
 };
 
 const IMAGE_POOL: readonly string[] = [
@@ -220,7 +218,6 @@ export function buildHotelProfiles(destinationId: string, place: MockPlace): rea
   return HOTEL_TEMPLATES.map((template, index) => {
     const random = createRandom(hashString(`hotel:${destinationId}:${index}`));
     const priceFactor = place.isFallback ? 1 : round(0.9 + random() * 0.25, 2);
-    const scoreBase = 6.4 + template.rating * 0.5;
     const images: MockImage[] = IMAGE_CATEGORIES.map((category, position) => ({
       category,
       url: imageUrl(IMAGE_POOL[(index + position * 2) % IMAGE_POOL.length], 1200),
@@ -239,9 +236,6 @@ export function buildHotelProfiles(destinationId: string, place: MockPlace): rea
       },
       latitude: round(place.latitude + (random() - 0.5) * 0.04, 6),
       longitude: round(place.longitude + (random() - 0.5) * 0.04, 6),
-      reviewScore: round(Math.min(9.8, scoreBase + random() * 1.2), 1),
-      reviewCount: 120 + Math.floor(random() * 4600),
-      distanceToCenterKm: round(0.2 + random() * 6, 1),
       amenityCodes: AMENITIES_BY_RATING[template.rating] ?? AMENITIES_BY_RATING[3],
       images,
       rateTemplates: template.rates.map((rate) => ({ ...rate, pricePerNight: round(rate.pricePerNight * priceFactor, 2) })),
@@ -251,38 +245,13 @@ export function buildHotelProfiles(destinationId: string, place: MockPlace): rea
 
 export function buildDescription(profile: MockHotelProfile, place: MockPlace, language: MockLanguage): string {
   const stars = '★'.repeat(profile.rating);
-  if (language === 'es') {
-    return `${profile.propertyType} de ${profile.rating} estrellas (${stars}) en ${place.city}, ${place.country}. `
-      + `A ${profile.distanceToCenterKm} km del centro, con habitaciones luminosas y desayuno disponible. `
-      + `Valoración de huéspedes: ${profile.reviewScore}/10 (${profile.reviewCount} opiniones).`;
-  }
-  return `${profile.rating}-star ${profile.propertyType.toLowerCase()} (${stars}) in ${place.city}, ${place.country}. `
-    + `${profile.distanceToCenterKm} km from the center, with bright rooms and breakfast available. `
-    + `Guest rating: ${profile.reviewScore}/10 (${profile.reviewCount} reviews).`;
-}
-
-export function buildPolicies(profile: MockHotelProfile, language: MockLanguage): string[] {
-  const premium = profile.rating >= 4;
   return language === 'es'
-    ? [
-      'Niños de 0 a 12 años se alojan gratis compartiendo habitación con sus padres.',
-      premium ? 'Se admiten mascotas pequeñas (suplemento por noche).' : 'No se admiten mascotas.',
-      'Se requiere tarjeta de crédito como garantía al hacer el check-in.',
-    ]
-    : [
-      'Children aged 0–12 stay free when sharing a room with their parents.',
-      premium ? 'Small pets are allowed (nightly surcharge).' : 'Pets are not allowed.',
-      'A credit card is required as a guarantee at check-in.',
-    ];
+    ? `${profile.propertyType} de ${profile.rating} estrellas (${stars}) en ${place.city}, ${place.country}, con habitaciones luminosas y desayuno disponible.`
+    : `${profile.rating}-star ${profile.propertyType.toLowerCase()} (${stars}) in ${place.city}, ${place.country}, with bright rooms and breakfast available.`;
 }
 
 export function checkTimes(profile: MockHotelProfile): { checkInTime: string; checkOutTime: string } {
   return profile.rating <= 2
     ? { checkInTime: '14:00', checkOutTime: '11:00' }
     : { checkInTime: '15:00', checkOutTime: '12:00' };
-}
-
-export function thumbnailUrl(profile: MockHotelProfile): string {
-  const source = profile.images[0];
-  return source ? source.url.replace('w=1200', 'w=400') : '';
 }

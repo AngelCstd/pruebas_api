@@ -25,10 +25,8 @@ import {
   buildDescription,
   buildHotelProfiles,
   buildPlace,
-  buildPolicies,
   checkTimes,
   roomFactor,
-  thumbnailUrl,
 } from './mock-hotel-fixtures';
 
 @Injectable()
@@ -153,12 +151,6 @@ export class MockHotelStrategy implements HotelProviderStrategy {
       latitude: profile.latitude,
       longitude: profile.longitude,
       rates: profile.rateTemplates.map((template) => this.createRate(dto, template, nights, place.currency)),
-      propertyType: profile.propertyType,
-      thumbnailUrl: thumbnailUrl(profile),
-      reviewScore: profile.reviewScore,
-      reviewCount: profile.reviewCount,
-      distanceToCenterKm: profile.distanceToCenterKm,
-      amenities: profile.amenityCodes.slice(0, 5).map((code) => amenityName(code, 'es')),
     }));
   }
 
@@ -166,7 +158,6 @@ export class MockHotelStrategy implements HotelProviderStrategy {
     const deadline = new Date(`${dto.checkIn}T00:00:00.000Z`);
     deadline.setUTCDate(deadline.getUTCDate() - 3);
     const roomsFactor = dto.rooms.reduce((sum, room) => sum + roomFactor(room.roomType), 0);
-    const pricePerNight = Number((template.pricePerNight * roomsFactor).toFixed(2));
     const rate: HotelRate = {
       tripProductId: this.createId('MOCK_TRIP'),
       rateClass: template.rateClass,
@@ -182,8 +173,6 @@ export class MockHotelStrategy implements HotelProviderStrategy {
         refundable: template.refundable,
         ...(template.refundable ? { deadline: deadline.toISOString() } : {}),
       },
-      nights,
-      pricePerNight,
     };
     this.products.set(rate.tripProductId, { rate, checkIn: dto.checkIn, createdAt: Date.now() });
     return rate;
@@ -221,15 +210,6 @@ export class MockHotelStrategy implements HotelProviderStrategy {
     if (!profile) throw new NotFoundException('Mock hotel not found.');
     return {
       hotelCode,
-      hotelName: profile.hotelName,
-      rating: profile.rating,
-      propertyType: profile.propertyType,
-      address: profile.address,
-      latitude: profile.latitude,
-      longitude: profile.longitude,
-      reviewScore: profile.reviewScore,
-      reviewCount: profile.reviewCount,
-      policies: buildPolicies(profile, language),
       description: buildDescription(profile, place, language),
       ...checkTimes(profile),
       amenities: profile.amenityCodes.map((code) => ({ code, name: amenityName(code, language) })),

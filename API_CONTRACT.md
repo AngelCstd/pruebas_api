@@ -268,9 +268,7 @@ Búsqueda de disponibilidad hotelera con tarifas en tiempo real.
 }
 ```
 
-> **Proveedor `mock` (datos enriquecidos y deterministas).** Devuelve 8 hoteles por búsqueda, con ciudad y país tomados del destino (`hotel_destinations`) y precios que dependen de la categoría, las noches y el tipo/cantidad de habitaciones. Los mismos parámetros siempre devuelven los mismos hoteles. Si el catálogo de destinos no está disponible o el destino no existe, usa el fixture offline de Madrid en EUR. Las coordenadas de destinos distintos al fixture son ficticias.
->
-> Campos opcionales adicionales (solo mock) en cada hotel: `propertyType`, `thumbnailUrl`, `reviewScore` (0–10), `reviewCount`, `distanceToCenterKm`, `amenities` (nombres en español). En cada tarifa: `nights` y `pricePerNight`. `amount` es el total de la estancia.
+> **Proveedor `mock` (datos deterministas).** Devuelve 8 hoteles por búsqueda, con ciudad y país tomados del destino (`hotel_destinations`) y precios que dependen de la categoría, las noches y el tipo/cantidad de habitaciones. Los mismos parámetros siempre devuelven los mismos hoteles. Si el catálogo de destinos no está disponible o el destino no existe, usa el fixture offline de Madrid en EUR. Las coordenadas de destinos distintos al fixture son ficticias. La forma de la respuesta es la misma que entrega Nemo: el mock no agrega campos propios.
 
 ### 5.2 `POST /hotels/validate`
 Revalida la vigencia de la tarifa y detecta posibles variaciones de precio (*Price Drift*) antes de comprometer una reserva.
@@ -359,7 +357,7 @@ Obtiene la ficha técnica del hotel, lista de amenidades y galería fotográfica
 }
 ```
 
-> **Proveedor `mock`:** la ficha varía por hotel y respeta `language`. Campos opcionales adicionales (solo mock): `hotelName`, `rating`, `propertyType`, `address`, `latitude`, `longitude`, `reviewScore`, `reviewCount` y `policies` (lista de textos). Los códigos válidos son `MOCK-<destinationId>-001` a `-008`.
+> **Proveedor `mock`:** la ficha varía por hotel y respeta `language`. Las amenidades usan códigos y nombres del catálogo oficial de Nemo (`GET /catalogs/amenities`). Los códigos válidos son `MOCK-<destinationId>-001` a `-008`.
 
 ### 5.5 `GET /hotels/catalog`
 Consulta el catálogo general de hoteles asignados a un destino en Nemo.
