@@ -27,12 +27,12 @@ test('Swagger generates all active paths, tags, query parameters and nested sche
     const config = new DocumentBuilder()
       .setTitle('Hotel Provider Service API')
       .setDescription('Production-ready NestJS hotel provider service integrating with Nemo Group (Price Navigator) and offline Mock provider.')
-      .setVersion('1.0.0').addTag('Hotels').addTag('Catalogs').addTag('System').build();
+      .setVersion('1.0.0').addTag('Hotels').addTag('Catalogs').addTag('Locations').addTag('System').build();
     const document = SwaggerModule.createDocument(app, config);
     assert.match(document.openapi, /^3\./);
-    assert.deepEqual(document.tags.map(tag => tag.name), ['Hotels', 'Catalogs', 'System']);
+    assert.deepEqual(document.tags.map(tag => tag.name), ['Hotels', 'Catalogs', 'Locations', 'System']);
     assert.deepEqual(Object.keys(document.paths).sort(), [
-      ...Object.keys(hotelRoutes), ...catalogRoutes.map(route => `/catalogs/${route}`), ...Object.keys(systemRoutes),
+      ...Object.keys(hotelRoutes), ...catalogRoutes.map(route => `/catalogs/${route}`), '/locations/search', ...Object.keys(systemRoutes),
     ].sort());
     for (const [path, [method, status, queries]] of Object.entries(hotelRoutes)) {
       const operation = document.paths[path][method];

@@ -26,7 +26,7 @@ El servicio backend en **NestJS** (`hotel-provider-service`) ha alcanzado la fas
   - `amenities.csv` (895 registros)
   - `suppliers.csv` (378 registros)
   - `accommodations.csv` (95 registros)
-- [x] Exclusión deliberada del catálogo masivo de destinos de código fuente (especificado para PostgreSQL en `hotel_destinations` con índices Trigram).
+- [x] Exclusión deliberada del catálogo masivo de destinos de código fuente (se consulta desde la tabla `hotel_destinations` en Supabase; ver Fase 6).
 - [x] Implementación del patrón Repository (`ICatalogRepository`, token `CATALOG_REPOSITORY`, y `LocalCatalogRepository` en memoria con carga de CSVs).
 - [x] Creación de 10 endpoints REST de catálogos (`GET /catalogs/*`).
 - [x] Paginación (`page`, `limit`, `totalPages`), ordenamiento (`sortOrder`), búsqueda por texto (`search`) y filtros por listas de códigos (`codes`, `groupCodes`).
@@ -65,6 +65,14 @@ El servicio backend en **NestJS** (`hotel-provider-service`) ha alcanzado la fas
 - [x] Interfaz interactiva Swagger UI lista en `http://localhost:3000/api/docs`.
 - [x] Prueba automatizada que valida la generación del OpenAPI schema en `tests/swagger.test.js`.
 
+### Fase 6: Catálogo de Destinos (`hotel_destinations`)
+- [x] Carga de los archivos `Destination_ES` y `Destination_EN` (Nemo, Sección 3.2) en la tabla `hotel_destinations` de Supabase (base de pruebas), con llave primaria `(destination_id, language_id)`.
+- [x] Limpieza de datos: duplicados, espacios raros, caracteres mal codificados y textos `NULL`.
+- [x] Patrón Repository para destinos (`IDestinationRepository`, token `DESTINATION_REPOSITORY`, `SupabaseDestinationRepository`).
+- [x] Endpoint `GET /locations/search` (`q` mín. 3 caracteres, `language`, `countryId`, `limit`) documentado en Swagger bajo el tag `Locations`.
+- [x] Configuración por `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`; sin ellas solo este endpoint responde `503`.
+- Pendiente (mejora): la búsqueda usa `ILIKE '%q%'` sobre `city_country` y ordena alfabéticamente, por lo que términos cortos como `can` también traen `Canadá`. Ideas: buscar solo en `city`, priorizar coincidencias por prefijo e ignorar acentos (`unaccent`).
+
 ---
 
 ## 3. Próximos Pasos Recomendados (Backlog Priorizado)
@@ -73,7 +81,5 @@ El servicio backend en **NestJS** (`hotel-provider-service`) ha alcanzado la fas
    - Crear un interceptor/middleware en `NemoXmlAdapter` que limite a 8 peticiones cada 10 segundos para respetar el límite de 10 req/10s de Nemo.
 2. **Capa de Autenticación Inbound**:
    - Integrar `SupabaseAuthGuard` para validar el JWT de los usuarios que consuman la API desde el frontend, o un `ApiKeyGuard` para llamadas entre microservicios.
-3. **Poblar la Tabla `hotel_destinations` en PostgreSQL**:
-   - Descargar `Destination_ES..zip` de Confluence (Sección 3.2), crear la tabla en PostgreSQL con el índice Trigram documentado y habilitar el endpoint `GET /locations/search`.
-4. **Activación de Reservas en Producción**:
+3. **Activación de Reservas en Producción**:
    - Una vez configuradas las credenciales definitivas y el límite de crédito en Nemo, descomentar los handlers de reserva en `hotel.controller.ts`.

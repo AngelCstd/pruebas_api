@@ -19,6 +19,7 @@ async function bootstrap(): Promise<void> {
     .setVersion('1.0.0')
     .addTag('Hotels')
     .addTag('Catalogs')
+    .addTag('Locations')
     .addTag('System')
     .build();
   const document = SwaggerModule.createDocument(app, config);

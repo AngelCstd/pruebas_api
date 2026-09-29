@@ -140,30 +140,59 @@ Parámetros comunes de consulta (Query Params):
 }
 ```
 
-### 4.3 Especificación de Base de Datos para Grandes Catálogos (`destinations`)
-El catálogo de destinos de Nemo supera los 100,000 registros y **nunca debe cargarse en código ni en memoria**. Debe almacenarse en PostgreSQL con la siguiente estructura:
+### 4.3 Destinos: tabla `hotel_destinations` y `GET /locations/search`
+El catálogo de destinos de Nemo (`Destination_ES` / `Destination_EN`, Sección 3.2) supera los 100,000 registros y **nunca debe cargarse en código ni en memoria**. Vive en una base de datos Postgres (Supabase) y se consulta a través del repositorio `IDestinationRepository` (token `DESTINATION_REPOSITORY`).
+
+**Tabla `hotel_destinations`** (un registro por destino **y por idioma**; llave primaria compuesta):
 
 ```sql
 CREATE TABLE hotel_destinations (
-    destination_id VARCHAR(64) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    country_code CHAR(2) NOT NULL,
-    country_name VARCHAR(120),
-    destination_type VARCHAR(32) NOT NULL, -- COUNTRY, STATE, CITY, ZONE
-    parent_destination_id VARCHAR(64) REFERENCES hotel_destinations(destination_id),
-    latitude NUMERIC(10, 7),
-    longitude NUMERIC(10, 7),
-    is_active BOOLEAN DEFAULT TRUE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    destination_id VARCHAR(50)  NOT NULL,
+    language_id    VARCHAR(10)  NOT NULL,   -- 'es' | 'en'
+    city           VARCHAR(255),
+    country        VARCHAR(150),
+    country_id     VARCHAR(10),
+    state          VARCHAR(150),
+    state_id       VARCHAR(50),
+    city_country   VARCHAR(500),            -- etiqueta de origen, usada para buscar y mostrar
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (destination_id, language_id)
 );
 
--- Índices recomendados para búsquedas eficientes:
-CREATE INDEX idx_destinations_country ON hotel_destinations (country_code);
-CREATE INDEX idx_destinations_parent ON hotel_destinations (parent_destination_id);
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX idx_destinations_name_trgm ON hotel_destinations USING gin (name gin_trgm_ops);
+CREATE INDEX idx_hotel_destinations_city_country_trgm ON hotel_destinations USING gin (city_country gin_trgm_ops);
+CREATE INDEX idx_hotel_destinations_country_id ON hotel_destinations (country_id);
+CREATE INDEX idx_hotel_destinations_language_id ON hotel_destinations (language_id);
 ```
+
+- La tabla tiene RLS activado: solo el backend accede con la llave de servicio (`SUPABASE_SERVICE_ROLE_KEY`).
+- Los datos de origen traen formatos inconsistentes en `city_country` (comas, guiones pegados, país en otro idioma); se limpiaron espacios, caracteres mal codificados y textos `NULL`, pero la etiqueta se conserva tal como viene de Nemo.
+
+#### `GET /locations/search`
+Autocompletado de destinos para el buscador del frontend.
+
+- **Query Params**:
+  - `q` (string, **requerido**, 3–100 caracteres): texto a buscar.
+  - `language` (`es` | `en`, opcional, por defecto `es`).
+  - `countryId` (string, opcional, 2–10 caracteres): filtra por código de país (ej. `MX`).
+  - `limit` (entero, opcional, 1–50, por defecto `10`).
+- **Búsqueda**: coincidencia parcial sin distinguir mayúsculas (`ILIKE '%q%'`) sobre `city_country`, ordenada alfabéticamente por `city_country`. Como `city_country` incluye el país, `can` también coincide con "Canadá". No ignora acentos.
+- **Respuesta `200 OK`**:
+```json
+[
+  {
+    "destinationId": "2262",
+    "languageId": "es",
+    "city": "Cancún",
+    "state": "Quintana Roo",
+    "stateId": "ROO",
+    "country": "México",
+    "countryId": "MX",
+    "label": "Cancún, Quintana Roo - México"
+  }
+]
+```
+- **Errores**: `400` si los parámetros son inválidos (por ejemplo `q` de menos de 3 caracteres); `503` si el catálogo no está configurado (faltan `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`) o Supabase no responde.
 
 ---
 

@@ -48,6 +48,9 @@ Returns domain code tables and dictionaries. Large catalogs support pagination (
 * `GET /catalogs/cancellation-fee-types`: Cancellation penalty categories (`CANCELLATION`, `NO_SHOW`, `MODIFICATION`).
 * `GET /catalogs/star-ratings`: Decimal star rating conversion matrix (1.0 to 6.0).
 
+### 1.1 Destinations (`/locations/*`)
+* `GET /locations/search?q=cancun&language=es&countryId=MX&limit=10`: Destination autocomplete backed by the `hotel_destinations` table in Supabase (`q` min. 3 chars, `language` `es|en`, `limit` 1–50). Requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; without them only this endpoint returns `503`.
+
 ### 2. Live Hotel Search & Lifecycle Operations (`/hotels/*`)
 * `POST /hotels/search?provider=mock|nemo`: Real-time availability search. Accepts destination, dates, rooms, passenger breakdowns, and rich filters (`hotelName`, `minRating`, `maxRating`, `ratings`, `boardTypes`, `hotelCodeList`).
 * `POST /hotels/validate?provider=mock|nemo`: Pre-checkout price stability and live availability verification.

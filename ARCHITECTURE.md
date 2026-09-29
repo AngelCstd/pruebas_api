@@ -179,8 +179,11 @@ flowchart LR
    - Parses seed CSV files (`database/seeds/amenities.csv`, `suppliers.csv`, `accommodations.csv`) on startup, requiring **zero running databases** during development and unit testing.
 2. **PostgreSQL Production Mode (`PrismaCatalogRepository`)**:
    - To connect to a live Postgres database, developers simply implement `ICatalogRepository` over Prisma/TypeORM and update the provider binding in `CatalogModule` (`useClass: PrismaCatalogRepository`).
-3. **Large-Scale Destinations Database**:
-   - High-volume geographic datasets (e.g. `Destination_ES.zip` from Section 3.2 of Price Navigator) are intentionally excluded from the code repository. They are designated for ingestion into a dedicated `hotel_destinations` database table with full-text search and spatial indexes.
+3. **Large-Scale Destinations Database (`IDestinationRepository`)**:
+   - High-volume geographic datasets (e.g. `Destination_ES` / `Destination_EN` from Section 3.2 of Price Navigator) are intentionally excluded from the code repository.
+   - They live in the `hotel_destinations` Postgres table (Supabase), one row per destination and language, and are queried through `IDestinationRepository` (token `DESTINATION_REPOSITORY`).
+   - `SupabaseDestinationRepository` is bound in `DestinationModule`; to change storage, implement `IDestinationRepository` and swap `useClass`.
+   - The Supabase client is created lazily, so the service boots without credentials and only `GET /locations/search` returns `503`.
 
 ---
 

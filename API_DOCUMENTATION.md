@@ -675,64 +675,59 @@ while preserving the requested page and matching totals.
 Combined amenity query:
 `GET /catalogs/amenities?groupCodes=MNO.HTL.AMT.SER,NMO.HTL.AMT.BCH&codes=820,821,822&search=pool&page=1&limit=20`
 
-### 9.1 Planned Locations & Destinations API Contract (`GET /locations/search`)
+### 9.1 Locations & Destinations API (`GET /locations/search`)
 
-For fast autocomplete/typeahead on frontend search bars, destinations are designed to be served directly from PostgreSQL using the table `hotel_destinations`:
+Destinations are served for frontend autocomplete/typeahead from the Postgres (Supabase) table `hotel_destinations`, through the `IDestinationRepository` interface (`DESTINATION_REPOSITORY` token, implemented by `SupabaseDestinationRepository`). The table holds one row per destination **and language** (primary key `destination_id` + `language_id`).
 
 | Parameter | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `query` | `string` | Yes | Search term (min. 2 chars). Matches destination name with fuzzy/trigram tolerance. |
-| `types` | `string` | No | Comma-separated destination types (e.g. `CTY,ARE,AIR`). Default: `CTY,ARE`. |
-| `countryCode` | `string` | No | ISO 2-letter country code filter (e.g. `MX`, `ES`, `US`). |
-| `lat`, `lng` | `number` | No | Latitude and Longitude for proximity ordering. |
-| `radiusKm` | `number` | No | Search radius in kilometers (requires `lat` and `lng`). |
-| `limit` | `number` | No | Max suggestions returned (default: 10, max: 30). |
+| `q` | `string` | Yes | Search term (3–100 chars). Case-insensitive partial match on the destination label (`city_country`). |
+| `language` | `string` | No | `es` (default) or `en`. |
+| `countryId` | `string` | No | Country code filter (e.g. `MX`, `ES`, `US`). |
+| `limit` | `number` | No | Max suggestions returned (1–50, default: 10). |
 
-#### Target PostgreSQL Schema & Indexing:
+Results are ordered alphabetically by label. The label includes the country, so a short term such as `can` also matches `Canadá`. Accents are not ignored (`cancun` does not match `Cancún`).
+
+#### Configuration
+Requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (see `.env.example`). Without them the service still boots and only this endpoint returns `503`. The service key must stay server-side.
+
+#### Schema (`hotel_destinations`)
 ```sql
 CREATE TABLE hotel_destinations (
-  destination_id VARCHAR(50) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  country_code VARCHAR(10),
-  country_name VARCHAR(150),
-  type VARCHAR(50) NOT NULL,
-  latitude DOUBLE PRECISION,
-  longitude DOUBLE PRECISION,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  destination_id VARCHAR(50) NOT NULL,
+  language_id VARCHAR(10) NOT NULL,
+  city VARCHAR(255),
+  country VARCHAR(150),
+  country_id VARCHAR(10),
+  state VARCHAR(150),
+  state_id VARCHAR(50),
+  city_country VARCHAR(500),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (destination_id, language_id)
 );
 
--- Fast Trigram index for sub-10ms autocomplete search
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX idx_destinations_name_trgm ON hotel_destinations USING gin (name gin_trgm_ops);
-CREATE INDEX idx_destinations_type ON hotel_destinations (type);
-CREATE INDEX idx_destinations_country ON hotel_destinations (country_code);
+CREATE INDEX idx_hotel_destinations_city_country_trgm ON hotel_destinations USING gin (city_country gin_trgm_ops);
+CREATE INDEX idx_hotel_destinations_country_id ON hotel_destinations (country_id);
+CREATE INDEX idx_hotel_destinations_language_id ON hotel_destinations (language_id);
 ```
 
-#### Example Response Contract:
+#### Example: `GET /locations/search?q=cancun&language=es&limit=5`
 ```json
-{
-  "query": "cancun",
-  "totalMatches": 2,
-  "data": [
-    {
-      "destinationId": "2262",
-      "name": "Cancún",
-      "type": "NMO.HTL.DST.CTY",
-      "typeLabel": "Ciudad",
-      "countryCode": "MX",
-      "countryName": "México"
-    },
-    {
-      "destinationId": "5891",
-      "name": "Cancún - Zona Hotelera",
-      "type": "NMO.HTL.DST.ARE",
-      "typeLabel": "Zona",
-      "countryCode": "MX",
-      "countryName": "México"
-    }
-  ]
-}
+[
+  {
+    "destinationId": "2262",
+    "languageId": "es",
+    "city": "Cancún",
+    "state": "Quintana Roo",
+    "stateId": "ROO",
+    "country": "México",
+    "countryId": "MX",
+    "label": "Cancún, Quintana Roo - México"
+  }
+]
 ```
+Errors: `400` for invalid parameters (e.g. `q` shorter than 3 characters); `503` when the catalog is not configured or unavailable.
 
 ## 10. Implemented Rate Lifecycle REST Endpoints
 

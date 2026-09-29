@@ -38,27 +38,13 @@ El sistema fue diseñado bajo 4 patrones arquitectónicos clave:
 
 ## 3. Catálogo de Destinos (Ubicaciones)
 
-Para evitar saturar el repositorio con millones de registros, el archivo de destinos no se incluyó en el código fuente:
-* **Descarga**: Confluence de Nemo Group, Sección **3.2 Destinos** (`Destination_ES..zip`, 1.84 MB comprimido).
-* **Nombre de tabla recomendado**: `hotel_destinations`
-* **Esquema e Índices recomendados en PostgreSQL**:
-  ```sql
-  CREATE TABLE hotel_destinations (
-    destination_id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    country_code VARCHAR(10),
-    country_name VARCHAR(150),
-    type VARCHAR(50) NOT NULL,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-  );
-
-  CREATE EXTENSION IF NOT EXISTS pg_trgm;
-  CREATE INDEX idx_destinations_name_trgm ON hotel_destinations USING gin (name gin_trgm_ops);
-  CREATE INDEX idx_destinations_type ON hotel_destinations (type);
-  CREATE INDEX idx_destinations_country ON hotel_destinations (country_code);
-  ```
+Para evitar saturar el repositorio con millones de registros, el archivo de destinos no se incluyó en el código fuente. Se cargó en la tabla `hotel_destinations` de Supabase (base de pruebas):
+* **Origen**: Confluence de Nemo Group, Sección **3.2 Destinos** (`Destination_ES` y `Destination_EN`).
+* **Tabla**: `hotel_destinations`, un registro por destino **y por idioma** (llave primaria `destination_id` + `language_id`). Columnas: `destination_id, language_id, city, country, country_id, state, state_id, city_country, created_at`.
+* **Índices**: trigram (`pg_trgm`) sobre `city_country`, más `country_id` y `language_id`. RLS activado; solo el backend accede con la llave de servicio.
+* **Acceso**: `GET /locations/search` mediante `IDestinationRepository` (`SupabaseDestinationRepository`). Requiere `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en `.env` (ver `.env.example`); sin ellas solo ese endpoint responde `503`.
+* **Calidad de datos**: se limpiaron duplicados, espacios, caracteres mal codificados y textos `NULL`. La etiqueta `city_country` conserva el formato inconsistente de Nemo.
+* **Mejora pendiente**: la búsqueda es `ILIKE '%q%'` sobre `city_country` con orden alfabético; ver `PROGRESS.md`, Fase 6.
 
 ---
 
@@ -130,7 +116,12 @@ curl -s "http://localhost:3000/hotels/MOCK-2262-001/details?provider=mock&langua
 curl -s "http://localhost:3000/hotels/catalog?destinationCode=2262&activeOnly=true&provider=mock" | jq .
 ```
 
-### F. Catálogos Paginados y Filtrados
+### F. Autocompletado de Destinos
+```bash
+curl -s "http://localhost:3000/locations/search?q=cancun&language=es&limit=5" | jq .
+```
+
+### G. Catálogos Paginados y Filtrados
 ```bash
 # Amenidades filtradas por grupo y texto
 curl -s "http://localhost:3000/catalogs/amenities?groupCode=MNO.HTL.AMT.SER&search=toalla&page=1&limit=10" | jq .
@@ -162,5 +153,4 @@ Las rutas de reserva y post-venta están completamente implementadas en DTOs, Es
 
 1. **Implementar Rate Limiter Outbound**: Middleware Token Bucket limitando a 8 peticiones / 10 segundos hacia Nemo.
 2. **Capa de Autenticación Inbound**: `SupabaseAuthGuard` para proteger las rutas que consuma el frontend.
-3. **Poblar Destinos en PostgreSQL**: Importar `Destination_ES..zip` y activar `GET /locations/search`.
-4. **Activar Reservas en Producción**: Descomentar los handlers cuando el contrato y límite de crédito estén activos.
+3. **Activar Reservas en Producción**: Descomentar los handlers cuando el contrato y límite de crédito estén activos.
