@@ -50,6 +50,13 @@ export class SearchRoomDto {
 }
 
 export class SearchHotelsDto {
+  @IsOptional()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(100)
+  @ApiPropertyOptional({ type: String, description: 'Tenant that owns the hotel data', example: 'tnt_example' })
+  public tenantId?: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(64)

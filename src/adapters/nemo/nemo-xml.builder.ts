@@ -129,7 +129,11 @@ export class NemoXmlBuilder {
   }
 
   private passengerAttributes(passenger: BookingPassengerDto): Record<string, string> {
-    return { '@_Title': passenger.title, '@_FirstName': passenger.firstName, '@_LastName': passenger.lastName };
+    return {
+      '@_Title': passenger.title ?? '',
+      '@_FirstName': passenger.firstName ?? '',
+      '@_LastName': passenger.lastName ?? '',
+    };
   }
 
   private buildDocument(root: string, transactionId: string, content: Record<string, unknown>): string {

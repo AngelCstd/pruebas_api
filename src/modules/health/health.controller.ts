@@ -9,7 +9,7 @@ interface HealthResponse {
 }
 
 interface ProviderStatus {
-  readonly provider: 'mock' | 'nemo';
+  readonly provider: 'mock' | 'nemo' | 'convenio' | 'all';
   readonly mode: 'offline' | 'external';
   readonly enabled: boolean;
   readonly ready: boolean;
@@ -42,6 +42,11 @@ export class HealthController {
   public providersStatus(): ProvidersStatusResponse {
     const nemoConfigured = Boolean(process.env.NEMO_AUTH_TOKEN?.trim());
     const nemoEnabled = process.env.NEMO_ENABLED?.trim().toLowerCase() === 'true';
+    const convenioConfigured = Boolean(
+      process.env.SUPABASE_URL?.trim()
+      && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
+    );
+    const externalProvider = process.env.HOTEL_EXTERNAL_PROVIDER?.trim().toLowerCase() === 'nemo' ? 'nemo' : 'mock';
     return {
       providers: [
         {
@@ -59,6 +64,22 @@ export class HealthController {
           ready: false,
           configured: nemoConfigured,
           message: 'Not tested or called by this endpoint; use mock endpoints until credentials are available.',
+        },
+        {
+          provider: 'convenio',
+          mode: 'external',
+          enabled: true,
+          ready: false,
+          configured: convenioConfigured,
+          message: 'Convenio hotels are read from Supabase (hotel_catalog_v). Needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY; tenantId is supplied per request. Not called by this endpoint.',
+        },
+        {
+          provider: 'all',
+          mode: 'external',
+          enabled: true,
+          ready: false,
+          configured: convenioConfigured,
+          message: `Combined search: convenio + ${externalProvider}. A failing source is reported in "sources" and does not break the others.`,
         },
       ],
     };

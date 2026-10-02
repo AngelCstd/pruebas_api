@@ -10,14 +10,22 @@ const hotelRoutes = {
   '/hotels/search': ['post', 201, ['provider']],
   '/hotels/validate': ['post', 200, ['provider']],
   '/hotels/cancellation-fees': ['post', 200, ['provider']],
-  '/hotels/catalog': ['get', 200, ['destinationCode', 'activeOnly', 'provider']],
-  '/hotels/{hotelCode}/details': ['get', 200, ['language', 'provider']],
+  '/hotels/catalog': ['get', 200, ['destinationCode', 'activeOnly', 'provider', 'tenantId']],
+  '/hotels/{hotelCode}/details': ['get', 200, ['language', 'provider', 'tenantId']],
+  '/hotels/book': ['post', 201, ['provider']],
+  '/hotels/bookings': ['get', 200, ['limit', 'provider', 'status', 'tenantId']],
+  '/hotels/bookings/{locator}': ['get', 200, ['provider', 'tenantId']],
+  '/hotels/bookings/{locator}/cancel': ['post', 200, ['provider']],
 };
 const catalogRoutes = ['room-types', 'board-types', 'amenity-groups', 'amenities', 'suppliers',
   'accommodation-types', 'booking-statuses', 'passenger-document-types', 'cancellation-fee-types', 'star-ratings'];
 const systemRoutes = {
   '/health': ['get', 200, []],
   '/providers/status': ['get', 200, []],
+};
+const careRoutes = {
+  '/clients': ['tenantId'],
+  '/persons': ['limit', 'organizationId', 'q', 'tenantId'],
 };
 
 test('Swagger generates all active paths, tags, query parameters and nested schemas', async () => {
@@ -27,13 +35,21 @@ test('Swagger generates all active paths, tags, query parameters and nested sche
     const config = new DocumentBuilder()
       .setTitle('Hotel Provider Service API')
       .setDescription('Production-ready NestJS hotel provider service integrating with Nemo Group (Price Navigator) and offline Mock provider.')
-      .setVersion('1.0.0').addTag('Hotels').addTag('Catalogs').addTag('Locations').addTag('System').build();
+      .setVersion('1.0.0').addTag('Hotels').addTag('Care').addTag('Catalogs').addTag('Locations').addTag('System').build();
     const document = SwaggerModule.createDocument(app, config);
     assert.match(document.openapi, /^3\./);
-    assert.deepEqual(document.tags.map(tag => tag.name), ['Hotels', 'Catalogs', 'Locations', 'System']);
+    assert.deepEqual(document.tags.map(tag => tag.name), ['Hotels', 'Care', 'Catalogs', 'Locations', 'System']);
     assert.deepEqual(Object.keys(document.paths).sort(), [
-      ...Object.keys(hotelRoutes), ...catalogRoutes.map(route => `/catalogs/${route}`), '/locations/search', ...Object.keys(systemRoutes),
+      ...Object.keys(hotelRoutes), ...catalogRoutes.map(route => `/catalogs/${route}`), '/locations/search',
+      ...Object.keys(systemRoutes), ...Object.keys(careRoutes),
     ].sort());
+    for (const [path, queries] of Object.entries(careRoutes)) {
+      const operation = document.paths[path].get;
+      assert.deepEqual(operation.tags, ['Care']);
+      assert(operation.responses[200]);
+      assert(operation.responses[400]);
+      assert.deepEqual(operation.parameters.map(param => param.name).sort(), queries.sort());
+    }
     for (const [path, [method, status, queries]] of Object.entries(hotelRoutes)) {
       const operation = document.paths[path][method];
       assert.deepEqual(operation.tags, ['Hotels']);
@@ -67,18 +83,20 @@ test('Swagger generates all active paths, tags, query parameters and nested sche
     assert.equal(schemas.SearchHotelsDto.properties.passengers.items.$ref, '#/components/schemas/PassengerDto');
     assert(schemas.SearchHotelsDto.required.includes('destinationId'));
     assert(!schemas.SearchHotelsDto.required.includes('hotelName'));
+    assert(!schemas.SearchHotelsDto.required.includes('tenantId'));
     assert.deepEqual(schemas.PassengerDto.properties.ageType.enum, ['ADT', 'CHD', 'INF']);
     assert.equal(schemas.SearchHotelsDto.properties.checkIn.example, '2026-11-10');
     assert.equal(schemas.ValidateRateDto.properties.tripProductId.type, 'string');
     assert.equal(schemas.CancellationFeesDto.properties.tripProductId.type, 'string');
     assert.doesNotThrow(() => JSON.stringify(document));
 
-    // Check prepared booking schemas without registering disabled HTTP routes.
+    // Booking schemas include their nested passenger and room definitions.
     const withBookingSchemas = SwaggerModule.createDocument(app, config, { extraModels: [BookHotelDto, CancelBookingDto] });
     const bookingSchemas = withBookingSchemas.components.schemas;
     assert.equal(bookingSchemas.BookHotelDto.properties.rooms.items.$ref, '#/components/schemas/BookingRoomDto');
     assert.equal(bookingSchemas.BookingRoomDto.properties.guests.items.$ref, '#/components/schemas/BookingGuestDto');
     assert.equal(bookingSchemas.LeadPassengerDto.properties.email.type, 'string');
+    assert.equal(bookingSchemas.BookHotelDto.properties.clientOrganizationId.type, 'string');
     assert.equal(bookingSchemas.CancelBookingDto.properties.reason.type, 'string');
     assert.deepEqual(Object.keys(withBookingSchemas.paths), Object.keys(document.paths));
   } finally {

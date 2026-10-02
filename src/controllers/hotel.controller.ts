@@ -1,20 +1,23 @@
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiHeader, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CancelBookingDto } from '../domain/dtos/cancel-booking.dto';
 import { BookingDetailResult, BookingCancellationResult } from '../domain/models/booking-lifecycle.model';
 import { QueryHotelDetailsDto } from '../domain/dtos/query-hotel-details.dto';
 import { QueryHotelCatalogDto } from '../domain/dtos/query-hotel-catalog.dto';
 import { BookHotelDto } from '../domain/dtos/book-hotel.dto';
+import { QueryBookingsDto } from '../domain/dtos/query-bookings.dto';
+import { QueryBookingProviderDto } from '../domain/dtos/query-booking-provider.dto';
 import { HotelDetailsResult } from '../domain/models/hotel-details.model';
 import { HotelCatalogResult } from '../domain/models/hotel-catalog.model';
-import { BookingResult } from '../domain/models/booking.model';
+import { BookingListResult, IdempotentBookingResult } from '../domain/models/booking-operation.model';
 import { ValidateRateDto } from '../domain/dtos/validate-rate.dto';
 import { CancellationFeesDto } from '../domain/dtos/cancellation-fees.dto';
 import { RateValidationResult, CancellationFeesResult } from '../domain/models/rate-lifecycle.model';
-import { Body, Get, Param, HttpCode, Controller, DefaultValuePipe, ParseEnumPipe, Post, Query } from '@nestjs/common';
+import { Body, Get, Headers, Param, HttpCode, Controller, DefaultValuePipe, ParseEnumPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { SearchHotelsDto } from '../domain/dtos/search-hotels.dto';
 import { ProviderType } from '../domain/enums/provider.enum';
 import { HotelSearchResult } from '../domain/models/hotel.model';
 import { HotelService } from '../services/hotel.service';
+import { BookingProviderGuard } from '../guards/booking-provider.guard';
 
 @ApiTags('Hotels')
 @Controller('hotels')
@@ -108,37 +111,59 @@ export class HotelController {
     return this.hotelService.getHotelDetails(hotelCode, dto, dto.provider);
   }
 
-  /* Booking is intentionally disabled in this repository.
-   * When moving repositories or activating production, configure Nemo credentials
-   * and credit-limit payment access, verify the supplier booking contract, then
-   * remove this block comment to register POST /hotels/book. Review authentication
-   * and duplicate-submission handling before exposing this committing operation.
   @Post('book')
+  @UseGuards(BookingProviderGuard)
+  @ApiOperation({ summary: 'Book a mock hotel rate idempotently' })
+  @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Unique key for this booking request.' })
+  @ApiQuery({ name: 'provider', required: false, enum: ProviderType, example: ProviderType.MOCK })
+  @ApiResponse({ status: 201, description: 'Booking created or replayed.' })
+  @ApiResponse({ status: 400, description: 'Invalid request, provider or idempotency key.' })
+  @ApiResponse({ status: 409, description: 'Idempotency conflict.' })
+  @ApiResponse({ status: 501, description: 'Booking is not enabled for this provider.' })
+  @ApiResponse({ status: 503, description: 'Booking operation store unavailable.' })
   public bookHotel(
     @Body() dto: BookHotelDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Query('provider', new DefaultValuePipe(ProviderType.MOCK), new ParseEnumPipe(ProviderType))
     provider: ProviderType,
-  ): Promise<BookingResult> {
-    return this.hotelService.bookHotel(dto, provider);
+  ): Promise<IdempotentBookingResult> {
+    return this.hotelService.bookHotel(dto, provider, idempotencyKey);
   }
-  */
 
-  /* Booking detail and cancellation routes are intentionally disabled.
-   * When changing repository / production credentials, configure NEMO_BASE_URL
-   * and NEMO_AUTH_TOKEN, verify the supplier lifecycle XML contract and permissions,
-   * enforce booking ownership and the 10 requests / 10 seconds supplier limit,
-   * then remove this block comment to activate these two handlers.
+  @Get('bookings')
+  @ApiOperation({ summary: 'List hotel reservations stored in Care' })
+  @ApiResponse({ status: 200, description: 'Bookings, newest first.' })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters.' })
+  @ApiResponse({ status: 501, description: 'Booking is not enabled for this provider.' })
+  @ApiResponse({ status: 503, description: 'Booking operation store unavailable.' })
+  public listBookings(@Query() dto: QueryBookingsDto): Promise<BookingListResult> {
+    return this.hotelService.listBookings(dto.provider ?? ProviderType.MOCK, dto.limit ?? 50, dto.status, dto.tenantId);
+  }
+
   @Get('bookings/:locator')
+  @ApiOperation({ summary: 'Get a booking by locator' })
+  @ApiParam({ name: 'locator', type: String })
+  @ApiQuery({ name: 'provider', required: false, enum: ProviderType, example: ProviderType.MOCK })
+  @ApiResponse({ status: 200, description: 'Booking detail.' })
+  @ApiResponse({ status: 400, description: 'Invalid provider.' })
+  @ApiResponse({ status: 404, description: 'Booking not found.' })
+  @ApiResponse({ status: 501, description: 'Booking is not enabled for this provider.' })
   public getBookingDetail(
     @Param('locator') locator: string,
-    @Query('provider', new DefaultValuePipe(ProviderType.MOCK), new ParseEnumPipe(ProviderType))
-    provider: ProviderType,
+    @Query() dto: QueryBookingProviderDto,
   ): Promise<BookingDetailResult> {
-    return this.hotelService.getBookingDetail(locator, provider);
+    return this.hotelService.getBookingDetail(locator, dto.provider ?? ProviderType.MOCK, dto.tenantId);
   }
 
   @Post('bookings/:locator/cancel')
   @HttpCode(200)
+  @ApiOperation({ summary: 'Cancel a mock booking' })
+  @ApiParam({ name: 'locator', type: String })
+  @ApiQuery({ name: 'provider', required: false, enum: ProviderType, example: ProviderType.MOCK })
+  @ApiResponse({ status: 200, description: 'Booking cancellation result.' })
+  @ApiResponse({ status: 400, description: 'Invalid request or provider.' })
+  @ApiResponse({ status: 404, description: 'Booking not found.' })
+  @ApiResponse({ status: 501, description: 'Booking is not enabled for this provider.' })
   public cancelBooking(
     @Param('locator') locator: string,
     @Body() dto: CancelBookingDto,
@@ -147,5 +172,4 @@ export class HotelController {
   ): Promise<BookingCancellationResult> {
     return this.hotelService.cancelBooking(locator, dto, provider);
   }
-  */
 }

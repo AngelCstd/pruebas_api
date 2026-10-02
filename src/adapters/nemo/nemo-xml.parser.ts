@@ -195,6 +195,8 @@ export class NemoXmlParser {
           ? { deadline: this.optionalString(policy?.Deadline) }
           : {}),
       },
+      bookable: false,
+      bookableReason: 'PROVIDER_BOOKING_DISABLED',
     };
   }
 

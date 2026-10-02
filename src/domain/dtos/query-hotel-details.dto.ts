@@ -1,8 +1,15 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { ProviderType } from '../enums/provider.enum';
 
 export class QueryHotelProviderDto {
+  @IsOptional()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(100)
+  @ApiPropertyOptional({ type: String, description: 'Tenant that owns the hotel data', example: 'tnt_example' })
+  public tenantId?: string;
+
   @IsOptional()
   @IsEnum(ProviderType)
   @ApiPropertyOptional({ type: String, enum: ProviderType, description: 'Hotel provider; mock works offline', example: 'mock', default: 'mock' })

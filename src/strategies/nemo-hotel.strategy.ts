@@ -9,7 +9,7 @@ import { BookingResult } from '../domain/models/booking.model';
 import { ValidateRateDto } from '../domain/dtos/validate-rate.dto';
 import { CancellationFeesDto } from '../domain/dtos/cancellation-fees.dto';
 import { RateValidationResult, CancellationFeesResult } from '../domain/models/rate-lifecycle.model';
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { NemoXmlAdapter } from '../adapters/nemo/nemo-xml.adapter';
 import { SearchHotelsDto } from '../domain/dtos/search-hotels.dto';
 import { HotelSearchResult } from '../domain/models/hotel.model';
@@ -38,16 +38,23 @@ export class NemoHotelStrategy implements HotelProviderStrategy {
     return this.nemoXmlAdapter.getHotelCatalog(dto);
   }
 
-  public bookHotel(dto: BookHotelDto): Promise<BookingResult> {
-    return this.nemoXmlAdapter.bookHotel(dto);
+  public bookHotel(_dto: BookHotelDto): Promise<BookingResult> {
+    throw this.bookingDisabled();
   }
 
 
-  public getBookingDetail(locator: string): Promise<BookingDetailResult> {
-    return this.nemoXmlAdapter.getBookingDetail(locator);
+  public getBookingDetail(_locator: string): Promise<BookingDetailResult> {
+    throw this.bookingDisabled();
   }
 
-  public cancelBooking(locator: string, dto: CancelBookingDto): Promise<BookingCancellationResult> {
-    return this.nemoXmlAdapter.cancelBooking(locator, dto);
+  public cancelBooking(_locator: string, _dto: CancelBookingDto): Promise<BookingCancellationResult> {
+    throw this.bookingDisabled();
+  }
+
+  private bookingDisabled(): HttpException {
+    return new HttpException({
+      statusCode: 501, message: 'Booking Nemo hotels is not enabled.',
+      error: 'Not Implemented', code: 'BOOKING_NOT_ENABLED',
+    }, 501);
   }
 }

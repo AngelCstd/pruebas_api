@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 async function bootstrap(): Promise<void> {
   dotenv.config();
   const app = await NestFactory.create(AppModule);
+  app.enableCors();
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
     whitelist: true,
@@ -18,6 +19,7 @@ async function bootstrap(): Promise<void> {
     .setDescription('Production-ready NestJS hotel provider service integrating with Nemo Group (Price Navigator) and offline Mock provider.')
     .setVersion('1.0.0')
     .addTag('Hotels')
+    .addTag('Care')
     .addTag('Catalogs')
     .addTag('Locations')
     .addTag('System')

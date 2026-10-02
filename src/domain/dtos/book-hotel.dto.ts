@@ -1,48 +1,93 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsDefined, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsDefined, IsEmail, IsEnum, IsIn,
+  IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, Validate, ValidateIf,
+  ValidateNested, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface,
+} from 'class-validator';
 import { PassengerAgeType } from '../enums/passenger-age-type.enum';
 
+interface PassengerReferenceShape {
+  readonly personId?: unknown;
+  readonly title?: unknown;
+  readonly firstName?: unknown;
+  readonly lastName?: unknown;
+  readonly email?: unknown;
+  readonly phone?: unknown;
+}
+
+@ValidatorConstraint({ name: 'passengerReference', async: false })
+class PassengerReferenceConstraint implements ValidatorConstraintInterface {
+  public validate(_value: unknown, args: ValidationArguments): boolean {
+    const passenger = args.object as PassengerReferenceShape;
+    if (passenger.personId === undefined) return true;
+    return typeof passenger.personId === 'string'
+      && /\S/.test(passenger.personId)
+      && passenger.personId.length <= 100
+      && passenger.title === undefined
+      && passenger.firstName === undefined
+      && passenger.lastName === undefined
+      && passenger.email === undefined
+      && passenger.phone === undefined;
+  }
+
+  public defaultMessage(): string {
+    return 'personId must be non-empty and cannot be combined with name fields';
+  }
+}
+
 export class BookingPassengerDto {
+  @Validate(PassengerReferenceConstraint)
+  @ApiPropertyOptional({ type: String, description: 'Existing Care person identifier', example: 'per_example' })
+  public personId?: string;
+
+  @ValidateIf((passenger: BookingPassengerDto) => passenger.personId === undefined)
   @IsIn(['MR', 'MRS', 'MS', 'MISS', 'MX', 'DR', 'CHD', 'INF'])
-  @ApiProperty({ type: String, description: 'Passenger title', example: 'MR' })
-  public title!: string;
+  @ApiPropertyOptional({ type: String, description: 'Passenger title for a new person', example: 'MR' })
+  public title?: string;
 
+  @ValidateIf((passenger: BookingPassengerDto) => passenger.personId === undefined)
   @IsString()
   @Matches(/\S/)
   @MaxLength(100)
-  @ApiProperty({ type: String, description: 'Passenger given name', example: 'Carlos' })
-  public firstName!: string;
+  @ApiPropertyOptional({ type: String, description: 'Passenger given name for a new person', example: 'Carlos' })
+  public firstName?: string;
 
+  @ValidateIf((passenger: BookingPassengerDto) => passenger.personId === undefined)
   @IsString()
   @Matches(/\S/)
   @MaxLength(100)
-  @ApiProperty({ type: String, description: 'Passenger family name', example: 'Mendez' })
-  public lastName!: string;
+  @ApiPropertyOptional({ type: String, description: 'Passenger family name for a new person', example: 'Mendez' })
+  public lastName?: string;
 }
 
 export class LeadPassengerDto extends BookingPassengerDto {
+  @ValidateIf((passenger: LeadPassengerDto) => passenger.personId === undefined)
   @IsEmail()
   @MaxLength(254)
-  @ApiProperty({ type: String, description: 'Lead passenger email', example: 'carlos@example.com' })
-  public email!: string;
+  @ApiPropertyOptional({ type: String, description: 'Email for a new lead passenger', example: 'carlos@example.com' })
+  public email?: string;
 
+  @ValidateIf((passenger: LeadPassengerDto) => passenger.personId === undefined)
   @IsString()
   @Matches(/^\+[1-9]\d{7,14}$/)
-  @ApiProperty({ type: String, description: 'Phone number in international E.164 format', example: '+34611223344' })
-  public phone!: string;
+  @ApiPropertyOptional({ type: String, description: 'Phone for a new lead passenger in E.164 format', example: '+34611223344' })
+  public phone?: string;
 }
 
 export class BookingGuestDto extends BookingPassengerDto {
+  @ValidateIf((guest: BookingGuestDto) => guest.personId === undefined || guest.type !== undefined)
   @IsEnum(PassengerAgeType)
-  @ApiProperty({ type: String, enum: PassengerAgeType, description: 'Guest age category', example: 'ADT' })
-  public type!: PassengerAgeType;
+  @ApiPropertyOptional({ type: String, enum: PassengerAgeType, description: 'Guest age category; defaults to ADT for an existing person', example: 'ADT' })
+  public type?: PassengerAgeType;
 
-  @ValidateIf((guest: BookingGuestDto) => guest.type !== PassengerAgeType.ADT || guest.age !== undefined)
+  @ValidateIf((guest: BookingGuestDto) => guest.personId !== undefined
+    ? guest.age !== undefined
+    : guest.type !== PassengerAgeType.ADT || guest.age !== undefined)
   @IsInt()
   @Min(0)
   @Max(17)
-  @ApiPropertyOptional({ type: Number, description: 'Age in years; required for children and infants', example: 8 })
+  @ApiPropertyOptional({ type: Number, description: 'Age in years; required for new children and infants', example: 8 })
   public age?: number;
 }
 
@@ -69,6 +114,19 @@ export class BookingRoomDto {
 }
 
 export class BookHotelDto {
+  @IsOptional()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(100)
+  @ApiPropertyOptional({ type: String, description: 'Tenant that owns the booking data', example: 'tnt_example' })
+  public tenantId?: string;
+
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(100)
+  @ApiProperty({ type: String, description: 'Client organization that pays for the booking', example: 'org_client' })
+  public clientOrganizationId!: string;
+
   @IsString()
   @Matches(/\S/)
   @MaxLength(256)
@@ -84,7 +142,7 @@ export class BookHotelDto {
   @IsDefined()
   @ValidateNested()
   @Type(() => LeadPassengerDto)
-  @ApiProperty({ type: () => LeadPassengerDto, description: 'Primary booking contact' })
+  @ApiProperty({ type: () => LeadPassengerDto, description: 'Existing Care person or a new primary contact' })
   public leadPassenger!: LeadPassengerDto;
 
   @IsArray()

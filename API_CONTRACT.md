@@ -248,7 +248,7 @@ Búsqueda de disponibilidad hotelera con tarifas en tiempo real.
           "tripProductId": "MOCK_TRIP_1789500000000_EF56GH78",
           "rateClass": "Standard",
           "amount": 862.5,
-          "currency": "EUR",
+          "currency": "MXN",
           "roomRates": [
             {
               "roomSequence": 1,
@@ -268,7 +268,7 @@ Búsqueda de disponibilidad hotelera con tarifas en tiempo real.
 }
 ```
 
-> **Proveedor `mock` (datos deterministas).** Devuelve 8 hoteles por búsqueda, con ciudad y país tomados del destino (`hotel_destinations`) y precios que dependen de la categoría, las noches y el tipo/cantidad de habitaciones. Los mismos parámetros siempre devuelven los mismos hoteles. Si el catálogo de destinos no está disponible o el destino no existe, usa el fixture offline de Madrid en EUR. Las coordenadas de destinos distintos al fixture son ficticias. La forma de la respuesta es la misma que entrega Nemo: el mock no agrega campos propios.
+> **Proveedor `mock` (datos deterministas).** Devuelve 8 hoteles por búsqueda, con ciudad y país tomados del destino (`hotel_destinations`) y precios que dependen de la categoría, las noches y el tipo/cantidad de habitaciones. Los mismos parámetros siempre devuelven los mismos hoteles. Todas sus tarifas son MXN, incluida `MOCK-PRICE-002`, sin escalar los montos. Si el catálogo de destinos no está disponible o el destino no existe, usa el fixture offline de Madrid. Las coordenadas de destinos distintos al fixture son ficticias.
 
 ### 5.2 `POST /hotels/validate`
 Revalida la vigencia de la tarifa y detecta posibles variaciones de precio (*Price Drift*) antes de comprometer una reserva.
@@ -287,7 +287,7 @@ Revalida la vigencia de la tarifa y detecta posibles variaciones de precio (*Pri
   "status": "AVAILABLE",
   "priceChanged": false,
   "amount": 862.5,
-  "currency": "EUR"
+  "currency": "MXN"
 }
 ```
 
@@ -306,7 +306,7 @@ Calcula los importes y fechas límite exactas de penalización en caso de cancel
 {
   "tripProductId": "MOCK_TRIP_1789500000000_EF56GH78",
   "refundable": true,
-  "currency": "EUR",
+  "currency": "MXN",
   "tiers": [
     {
       "from": "2026-10-12T00:00:00.000Z",
@@ -385,37 +385,63 @@ Consulta el catálogo general de hoteles asignados a un destino en Nemo.
 
 ---
 
-## 6. Operaciones Transaccionales y de Reserva (Deshabilitadas por Seguridad)
+## 6. Reservas temporales con mock
 
-> [!CAUTION]
-> **Modificaciones en el sistema Nemo apagadas por seguridad**:
-> Los endpoints de reserva, consulta de reserva y cancelación están **completamente modelados, tipados y testeados a nivel de DTOs, interfaces de dominio y adaptadores XML**, pero se encuentran **comentados en `src/controllers/hotel.controller.ts`**.
-> Esta decisión previene que llamadas accidentales generen compromisos económicos reales en proveedores mayoristas durante la fase de desarrollo.
+Las rutas están habilitadas únicamente con `provider=mock`. `convenio` y `nemo` responden `501` con `code: BOOKING_NOT_ENABLED`; `all` responde `400`.
 
-### 6.1 `POST /hotels/book` (Comentado en Controlador)
-- **Body (`BookHotelDto`)**:
-  - `tripProductId`: Token de producto obtenido de la búsqueda o validación.
-  - `passengers`: Lista de pasajeros con `name`, `surname`, `ageType` (`ADT`, `CHD`, `INF`), `documentType` y `documentNumber`.
-  - `rooms`: Asignación de pasajeros por `roomSequence`.
-  - `leadPassenger`: Identificación del titular de la reserva.
-  - `agencyReference`: Código identificador interno para la agencia.
-- **Respuesta Esperada (`201 Created`)**:
+- `POST /hotels/book`: requiere el header `Idempotency-Key` y un `BookHotelDto`. Retiene crédito, reserva en el mock y crea la reserva en Care. Devuelve `BookingResult` con `reservation`, `operationId` e `idempotentReplay`. Las operaciones se reclaman y cierran en `hotel_booking_operations`.
+- `GET /hotels/bookings/:locator`: devuelve el detalle persistido y usa el estado en memoria del mock como respaldo.
+- `POST /hotels/bookings/:locator/cancel`: cancela una reserva; repetir la cancelación devuelve el mismo resultado persistido.
+- `GET /hotels/bookings?tenantId=...&limit=50&status=BOOKED`: lista las reservas de `hotel_reservations_v`. `limit` acepta 1–100 y `status` acepta `BOOKED`, `CANCELLED` o `FAILED`.
+
+Las tarifas indican si admiten reserva mediante `bookable`, `bookableReason` y `bookingNote`. Solo las tarifas mock tienen `bookable: true`.
+
+El almacén requiere `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`; el `tenantId` se recibe en cada petición y todas las consultas se filtran por `tenant_id`. Sin configuración, las operaciones mock responden `503`. El esquema está en `database/hotel_booking/01_schema.sql` y debe aplicarlo manualmente el usuario.
+
+### 6.1 Clientes y personas de Care
+
+- `GET /clients?tenantId=...` devuelve `{ items: ClientCredit[] }`, ordenado por nombre. Lee `client_credit_v`; los importes `creditLimit`, `used` y `available` son números.
+- `GET /persons?tenantId=...&organizationId=...&q=...&limit=20` devuelve `{ items: PersonSummary[] }`, ordenado por nombre. `tenantId` y `organizationId` son obligatorios, `q` busca sin distinguir mayúsculas en nombre o correo y `limit` acepta 1–50.
+
+Ambos endpoints usan el repositorio de Care con llave de servicio y filtran siempre por `tenant_id`; `/persons` también filtra por `organization_id`.
+
+### 6.2 Reserva con crédito
+
+`POST /hotels/book?provider=mock` requiere ahora `clientOrganizationId`. El titular y cada huésped pueden ser una persona existente (`{ "personId": "per_..." }`) o una persona nueva con sus campos de nombre actuales; no se permite mezclar `personId` con campos de nombre.
+
+Tras reclamar la idempotencia, el back valida la tarifa, resuelve el nombre del titular, retiene crédito con `hold_hotel_credit_v1`, reserva en el mock y crea toda la reserva de Care con `create_hotel_reservation_v1`. Cualquier fallo posterior a la retención intenta `release_hotel_credit_v1`. Un replay devuelve lo guardado sin repetir retención, proveedor ni creación.
+
+La respuesta `201` agrega:
+
 ```json
 {
-  "locator": "NMO-BK-984210",
-  "status": "CONFIRMED",
-  "tripProductId": "MOCK_TRIP_VALIDATED_EF56GH78",
-  "totalAmount": 862.5,
-  "currency": "EUR",
-  "creationDate": "2026-09-28T19:35:00.000Z"
+  "reservation": {
+    "tripId": "trp_...",
+    "serviceId": "svc_...",
+    "bookingId": "bkg_...",
+    "hotelDetailId": "hot_...",
+    "chargeIds": ["chg_..._1"],
+    "itemIds": ["tsi_..._1"],
+    "dueAt": "2026-11-01"
+  }
 }
 ```
 
-### 6.2 `GET /hotels/bookings/:locator` (Comentado en Controlador)
-- Consulta el estado actual de una reserva en Nemo mediante `BookingQueryRQ`.
+Los rechazos de crédito responden `409` con `code` y, cuando aplican, `available`, `requested` y `currency`. `PRICE_CHANGED` responde `409`; `PERSON_NOT_FOUND` responde `404`. Los fallos esperados al crear en Care mapean `INVALID_PAYLOAD` y `PERSON_INCOMPLETE` a `400`, `PERSON_NOT_FOUND` a `404` y los demás a `409`.
 
-### 6.3 `POST /hotels/bookings/:locator/cancel` (Comentado en Controlador)
-- Ejecuta la cancelación definitiva de una reserva en Nemo mediante `BookingCancellationRQ`.
+### 6.3 Lista de reservas
+
+`GET /hotels/bookings?tenantId=...&provider=mock&limit=50&status=BOOKED` lee `hotel_reservations_v`, no `hotel_booking_operations`. Conserva el límite 1–100 y agrega a cada `BookingSummary`:
+
+- `clientName: string | null`
+- `tripId: string`
+- `outstanding: number | null`
+- `dueAt: string | null`
+
+`booking_status='CANCELLED'` se mapea a `CANCELLED`; cualquier otro estado a `BOOKED`. `status=FAILED` devuelve una lista vacía porque las operaciones fallidas no existen en las tablas de reserva de Care. El detalle y la cancelación siguen leyendo `hotel_booking_operations`.
+
+> [!WARNING]
+> `POST /hotels/bookings/:locator/cancel` todavía sólo cancela el mock y marca la operación. No actualiza las tablas de Care ni libera crédito.
 
 ---
 

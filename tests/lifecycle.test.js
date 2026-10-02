@@ -104,6 +104,7 @@ test('catalog and lifecycle HTTP routes, including Nemo XML transport', async ()
     const search = await post('/hotels/search?provider=mock', { destinationId: '2262', checkIn: '2026-11-15', checkOut: '2026-11-20', rooms: [{ roomType: 'NMO.HTL.RMT.DBL', roomSequence: 1 }], passengers: [{ ageType: 'ADT', roomSequence: 1 }] });
     assert.equal(search.status, 201);
     for (const rate of search.body.hotels[0].rates) {
+      assert.equal(rate.bookable, true);
       const result = await post('/hotels/validate', { tripProductId: rate.tripProductId });
       assert.equal(result.status, 200);
       assert.equal(result.body.validatedPrice.amount, rate.amount);

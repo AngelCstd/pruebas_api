@@ -5,7 +5,7 @@ import { QueryHotelCatalogDto } from '../domain/dtos/query-hotel-catalog.dto';
 import { BookHotelDto } from '../domain/dtos/book-hotel.dto';
 import { HotelDetailsResult } from '../domain/models/hotel-details.model';
 import { HotelCatalogResult } from '../domain/models/hotel-catalog.model';
-import { BookingResult } from '../domain/models/booking.model';
+import { BookingListResult, IdempotentBookingResult, ListedBookingStatus } from '../domain/models/booking-operation.model';
 import { ValidateRateDto } from '../domain/dtos/validate-rate.dto';
 import { CancellationFeesDto } from '../domain/dtos/cancellation-fees.dto';
 import { RateValidationResult, CancellationFeesResult } from '../domain/models/rate-lifecycle.model';
@@ -14,10 +14,14 @@ import { SearchHotelsDto } from '../domain/dtos/search-hotels.dto';
 import { ProviderType } from '../domain/enums/provider.enum';
 import { HotelSearchResult } from '../domain/models/hotel.model';
 import { HotelStrategyFactory } from '../strategies/hotel-strategy.factory';
+import { BookingApplicationService } from './booking-application.service';
 
 @Injectable()
 export class HotelService {
-  public constructor(private readonly strategyFactory: HotelStrategyFactory) {}
+  public constructor(
+    private readonly strategyFactory: HotelStrategyFactory,
+    private readonly bookings: BookingApplicationService,
+  ) {}
 
   public searchHotels(
     dto: SearchHotelsDto,
@@ -70,16 +74,20 @@ export class HotelService {
     return this.strategyFactory.resolve(provider).getHotelCatalog(dto);
   }
 
-  public bookHotel(dto: BookHotelDto, provider: ProviderType = ProviderType.MOCK): Promise<BookingResult> {
-    return this.strategyFactory.resolve(provider).bookHotel(dto);
+  public bookHotel(dto: BookHotelDto, provider: ProviderType, idempotencyKey: string | undefined): Promise<IdempotentBookingResult> {
+    return this.bookings.bookHotel(dto, provider, idempotencyKey);
   }
 
 
-  public getBookingDetail(locator: string, provider: ProviderType = ProviderType.MOCK): Promise<BookingDetailResult> {
-    return this.strategyFactory.resolve(provider).getBookingDetail(locator);
+  public getBookingDetail(locator: string, provider: ProviderType = ProviderType.MOCK, tenantId?: string): Promise<BookingDetailResult> {
+    return this.bookings.getBookingDetail(locator, provider, tenantId);
   }
 
   public cancelBooking(locator: string, dto: CancelBookingDto, provider: ProviderType = ProviderType.MOCK): Promise<BookingCancellationResult> {
-    return this.strategyFactory.resolve(provider).cancelBooking(locator, dto);
+    return this.bookings.cancelBooking(locator, dto, provider);
+  }
+
+  public listBookings(provider: ProviderType, limit: number, status?: ListedBookingStatus, tenantId?: string): Promise<BookingListResult> {
+    return this.bookings.listBookings(provider, limit, status, tenantId);
   }
 }

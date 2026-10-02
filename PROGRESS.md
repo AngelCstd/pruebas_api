@@ -12,7 +12,7 @@ El servicio backend en **NestJS** (`hotel-provider-service`) ha alcanzado la fas
 
 * **Compilación**: TypeScript compila al 100% con `strict: true` y `noImplicitAny: true` (**0 errores**).
 * **Calidad de Código**: **Cero usos explícitos de `any`** en todo el código fuente (verificado automáticamente por análisis de AST en las pruebas).
-* **Pruebas Automatizadas**: **12 suites de pruebas** ejecutándose y pasando en verde con `npm test` (< 1.5s).
+* **Pruebas Automatizadas**: **43 pruebas** ejecutándose y pasando en verde con `npm test`.
 * **Documentación Interactiva**: **Swagger / OpenAPI** montado y operativo en `http://localhost:3000/api/docs`.
 
 ---
@@ -72,6 +72,35 @@ El servicio backend en **NestJS** (`hotel-provider-service`) ha alcanzado la fas
 - [x] Endpoint `GET /locations/search` (`q` mín. 3 caracteres, `language`, `countryId`, `limit`) documentado en Swagger bajo el tag `Locations`.
 - [x] Configuración por `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`; sin ellas solo este endpoint responde `503`.
 - Pendiente (mejora): la búsqueda usa `ILIKE '%q%'` sobre `city_country` y ordena alfabéticamente, por lo que términos cortos como `can` también traen `Canadá`. Ideas: buscar solo en `city`, priorizar coincidencias por prefijo e ignorar acentos (`unaccent`).
+
+### Fase 7: Hoteles con convenio y búsqueda combinada (2026-10-01)
+- [x] Catálogo de hoteles de MIA en la base de Care: tablas `suppliers` y `supplier_hotel_profiles` + vista `hotel_catalog_v` (`database/hotel_catalog/`, **borrador sin aplicar**). Exportación desde MIA a CSV e importación por staging incluidas.
+- [x] `ConvenioHotelStrategy` (`provider=convenio`): busca por la **ciudad** del destino pedido (se resuelve con `hotel_destinations`); si el destino no se resuelve no hay resultados. Siempre disponible mientras el convenio esté vigente a la llegada. Precio = tarifa por noche × noches × cuartos.
+- [x] `CompositeHotelStrategy` (`provider=all`): convenio + proveedor externo (`mock` por defecto, `nemo` con `HOTEL_EXTERNAL_PROVIDER=nemo`). Cada hotel lleva `source`; si una fuente falla el resultado lo informa en `sources` y las demás siguen. Validar, cancelación y detalle se enrutan por el prefijo del id (`CNV~` / `CNV-` = convenio, `MOCK` = mock).
+- [x] `tenantId` llega en el cuerpo de los POST y en la query de los GET; la llave de servicio se salta la RLS, por eso el back filtra siempre por el tenant recibido. `HOTEL_EXTERNAL_PROVIDER` selecciona la fuente externa.
+- [x] Pruebas en `tests/convenio.test.js` (repositorios falsos).
+- Pendiente: reserva de convenio (hoy responde 501), reserva con `provider=all` (responde 400 a propósito), persona extra y desayuno aparte en el precio, política de cancelación de convenio (hoy "por confirmar con el hotel"), confirmar si `tarifas.precio` incluye impuestos y es por noche y por cuarto.
+
+### Fase 8: Reservas mock idempotentes (2026-10-01)
+- [x] Tarifas con `bookable`, motivo y nota: mock reservable; convenio pendiente de Operaciones; Nemo deshabilitado.
+- [x] CORS temporal abierto y rutas de reserva, detalle, cancelación y listado habilitadas.
+- [x] Reservas limitadas a `provider=mock`; convenio/Nemo responden `501 BOOKING_NOT_ENABLED` y `all` responde `400`.
+- [x] Patrón Repository para `hotel_booking_operations`, con implementación Supabase filtrada siempre por el `tenantId` recibido e implementación en memoria aislada por tenant para pruebas.
+- [x] Algoritmo idempotente reclamar–llamar–cerrar con fingerprint SHA-256 de JSON canónico, replay, conflictos y reintento de operaciones fallidas.
+- [x] Detalle desde la operación persistida, cancelación idempotente y listado por estado sin operaciones `PENDING`.
+- [x] Borrador SQL en `database/hotel_booking/01_schema.sql` (no ejecutado).
+- [x] Suite automatizada ampliada con escenarios de reserva, proveedores, cancelación, listado y recuperación de fallos.
+
+### Fase 9: Reserva mock con crédito en Care (2026-10-02)
+- [x] Repositorio `ICareReservationRepository` con implementaciones Supabase y en memoria para pruebas; lecturas siempre acotadas por tenant y RPCs de retención, liberación y creación.
+- [x] `GET /clients` y `GET /persons`, con validación de tenant, cliente, búsqueda y límite.
+- [x] `BookHotelDto` ampliado con `clientOrganizationId` y referencias a personas existentes o nuevas.
+- [x] Orquestación claim → validar tarifa → resolver titular → retener crédito → reservar proveedor → crear reserva Care → cerrar operación, incluida liberación compensatoria en fallos.
+- [x] Replay idempotente con los identificadores de Care guardados en `response_payload`.
+- [x] Listado desde `hotel_reservations_v`, con cliente, viaje, saldo pendiente y vencimiento; las operaciones fallidas no se listan.
+- [x] Mock unificado en MXN, incluida `MOCK-PRICE-002`, sin conversión de montos.
+- [x] Suite de 43 pruebas en verde, con escenarios felices y fallos de crédito, proveedor, persona y creación en Care.
+- Pendiente: la cancelación aún no modifica Care ni libera el crédito retenido.
 
 ---
 

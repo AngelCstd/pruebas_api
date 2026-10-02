@@ -91,8 +91,8 @@ export class MockHotelStrategy implements HotelProviderStrategy {
   private getProduct(id: string): { rate: HotelRate; checkIn: string; createdAt: number; hotelInformation?: BookingResult['hotelInformation'] } {
     if (id === 'MOCK-EXP-001') throw new GoneException('The hotel rate session has expired. Please refresh search.');
     if (id === 'MOCK-PRICE-002') {
-      return { rate: { tripProductId: id, rateClass: 'Standard', amount: 935, currency: 'EUR',
-        roomRates: [], cancellationPolicy: { refundable: true, deadline: '2026-11-12T00:00:00.000Z' } },
+      return { rate: { tripProductId: id, rateClass: 'Standard', amount: 935, currency: 'MXN',
+        roomRates: [], cancellationPolicy: { refundable: true, deadline: '2026-11-12T00:00:00.000Z' }, bookable: true },
         checkIn: '2026-11-15', createdAt: Date.now() };
     }
     const product = this.products.get(id);
@@ -150,11 +150,11 @@ export class MockHotelStrategy implements HotelProviderStrategy {
       address: profile.address,
       latitude: profile.latitude,
       longitude: profile.longitude,
-      rates: profile.rateTemplates.map((template) => this.createRate(dto, template, nights, place.currency)),
+      rates: profile.rateTemplates.map((template) => this.createRate(dto, template, nights)),
     }));
   }
 
-  private createRate(dto: SearchHotelsDto, template: MockRateTemplate, nights: number, currency: string): HotelRate {
+  private createRate(dto: SearchHotelsDto, template: MockRateTemplate, nights: number): HotelRate {
     const deadline = new Date(`${dto.checkIn}T00:00:00.000Z`);
     deadline.setUTCDate(deadline.getUTCDate() - 3);
     const roomsFactor = dto.rooms.reduce((sum, room) => sum + roomFactor(room.roomType), 0);
@@ -162,7 +162,7 @@ export class MockHotelStrategy implements HotelProviderStrategy {
       tripProductId: this.createId('MOCK_TRIP'),
       rateClass: template.rateClass,
       amount: Number((template.pricePerNight * roomsFactor * nights).toFixed(2)),
-      currency,
+      currency: 'MXN',
       roomRates: dto.rooms.map((room) => ({
         roomSequence: room.roomSequence,
         roomType: this.roomLabel(room.roomType),
@@ -173,6 +173,7 @@ export class MockHotelStrategy implements HotelProviderStrategy {
         refundable: template.refundable,
         ...(template.refundable ? { deadline: deadline.toISOString() } : {}),
       },
+      bookable: true,
     };
     this.products.set(rate.tripProductId, { rate, checkIn: dto.checkIn, createdAt: Date.now() });
     return rate;

@@ -21,7 +21,7 @@ const detailXml = xmlExample('AdditionalInfoQueryRS');
 const catalogXml = xmlExample('HotelCatalogQueryRS');
 const bookingXml = xmlExample('BookingProductsRS');
 
-test('hotel details and catalog HTTP routes and disabled booking', async () => {
+test('hotel details, catalog HTTP routes and booking validation', async () => {
   let upstreamBody = validation;
   let upstreamStatus = 200;
   const received = [];
@@ -83,7 +83,11 @@ test('hotel details and catalog HTTP routes and disabled booking', async () => {
       assert.equal((await fetch(`${base}/hotels/MOCK-2262-001/details?${query}`)).status, 400, query);
     }
     assert.equal((await fetch(`${base}/hotels/missing/details`)).status, 404);
-    assert.equal((await post('/hotels/book', {})).status, 404);
+    assert.equal((await post('/hotels/book', {})).status, 400);
+    const disabledBooking = await post('/hotels/book?provider=nemo', {});
+    assert.equal(disabledBooking.status, 501);
+    assert.equal(disabledBooking.body.code, 'BOOKING_NOT_ENABLED');
+    assert.equal((await post('/hotels/book?provider=all', {})).status, 400);
     upstreamBody = detailXml;
     let result = await fetch(`${base}/hotels/MAD00123/details?provider=nemo&language=en`);
     assert.equal(result.status, 200);
@@ -133,7 +137,7 @@ test('booking DTO validates nested guests and XML builder escapes user values', 
   const { validate } = require('class-validator');
   const { BookHotelDto } = require('../dist/domain/dtos/book-hotel.dto');
   const { NemoXmlBuilder } = require('../dist/adapters/nemo/nemo-xml.builder');
-  const dto = { tripProductId: 'ID<&"', clientReference: 'CLIENT-1',
+  const dto = { clientOrganizationId: 'org-client', tripProductId: 'ID<&"', clientReference: 'CLIENT-1',
     leadPassenger: { title: 'MR', firstName: 'Carlos', lastName: 'Mendez', email: 'carlos@example.com', phone: '+34611223344' },
     rooms: [{ roomSequence: 1, guests: [{ title: 'CHD', firstName: 'Mateo', lastName: 'Mendez', type: 'CHD', age: 8 }] }] };
   const errors = value => validate(plainToInstance(BookHotelDto, value), { whitelist: true, forbidNonWhitelisted: true });
