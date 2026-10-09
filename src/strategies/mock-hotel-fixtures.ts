@@ -102,6 +102,22 @@ const IMAGE_POOL: readonly string[] = [
   'photo-1520250497591-112f2f40a3f4',
   'photo-1542314831-068cd1dbfeeb',
   'photo-1445019980597-93fa8acb246c',
+  'photo-1455587734955-081b22074882',
+  'photo-1582719508461-905c673771fd',
+  'photo-1590490360182-c33d57733427',
+  'photo-1571896349842-33c89424de2d',
+  'photo-1549294413-26f195200c16',
+  'photo-1540541338287-41700207dee6',
+  'photo-1518733057094-95b53143d2a7',
+  'photo-1496417263034-38ec4f0b665a',
+  'photo-1522798514-97ceb8c4f1c8',
+  'photo-1631049307264-da0ec9d70304',
+  'photo-1601918774946-25832a4be0d6',
+  'photo-1578683010236-d716f9a3f461',
+  'photo-1546412414-e1885259563a',
+  'photo-1572331165267-854da2b10ccc',
+  'photo-1591088398332-8a7791972843',
+  'photo-1586611292717-f828b167408c',
 ];
 const IMAGE_CATEGORIES: readonly string[] = ['Exterior', 'Room', 'Pool', 'Lobby'];
 
@@ -218,9 +234,11 @@ export function buildHotelProfiles(destinationId: string, place: MockPlace): rea
   return HOTEL_TEMPLATES.map((template, index) => {
     const random = createRandom(hashString(`hotel:${destinationId}:${index}`));
     const priceFactor = place.isFallback ? 1 : round(0.9 + random() * 0.25, 2);
+    const imageRandom = createRandom(hashString(`hotel-image:${destinationId}:${index}`));
+    const imageSeed = Math.floor(imageRandom() * IMAGE_POOL.length);
     const images: MockImage[] = IMAGE_CATEGORIES.map((category, position) => ({
       category,
-      url: imageUrl(IMAGE_POOL[(index + position * 2) % IMAGE_POOL.length], 1200),
+      url: imageUrl(IMAGE_POOL[(imageSeed + position * 2) % IMAGE_POOL.length], 1200),
     }));
     const number = 1 + Math.floor(random() * 240);
     return {

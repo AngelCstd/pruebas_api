@@ -42,7 +42,7 @@ export interface HotelItem {
   readonly address: HotelAddress;
   readonly latitude?: number;
   readonly longitude?: number;
-  /** Por ahora, solo lo informan los hoteles de convenio. */
+  /** Por ahora, lo informan convenio y mock (este último como dato de ejemplo). */
   readonly thumbnailUrl?: string;
   readonly rates: readonly HotelRate[];
   /** De dónde viene el hotel. Solo lo informa la búsqueda combinada (`provider=all`). */

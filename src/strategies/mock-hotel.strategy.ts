@@ -150,6 +150,8 @@ export class MockHotelStrategy implements HotelProviderStrategy {
       address: profile.address,
       latitude: profile.latitude,
       longitude: profile.longitude,
+      // TODO(demo-only): Foto de stock placeholder, no del hotel ficticio; revisar al definir imágenes reales de Nemo.
+      thumbnailUrl: profile.images[0].url,
       rates: profile.rateTemplates.map((template) => this.createRate(dto, template, nights)),
     }));
   }
