@@ -205,6 +205,7 @@ export class ConvenioHotelStrategy implements HotelProviderStrategy {
       address: hotel.address,
       ...(hotel.latitude !== null ? { latitude: hotel.latitude } : {}),
       ...(hotel.longitude !== null ? { longitude: hotel.longitude } : {}),
+      ...(hotel.photoUrls.length > 0 ? { thumbnailUrl: hotel.photoUrls[0] } : {}),
       rates: [rate],
       source: ProviderType.CONVENIO,
     };
