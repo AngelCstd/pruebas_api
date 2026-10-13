@@ -11,9 +11,9 @@
 ## 1. Información General y Documentación Interactiva
 
 - **Servicio**: `hotel-provider-service` (NestJS 10, TypeScript estricto, Clean Architecture)
-- **Documentación Interactiva (Swagger UI)**: `http://localhost:3000/api/docs`
-- **Especificación OpenAPI (JSON)**: `http://localhost:3000/api/docs-json`
-- **Puerto por defecto**: `3000` (configurable mediante variable de entorno `PORT`)
+- **Documentación Interactiva (Swagger UI)**: `http://localhost:3001/api/docs`
+- **Especificación OpenAPI (JSON)**: `http://localhost:3001/api/docs-json`
+- **Puerto por defecto**: `3001` (configurable mediante variable de entorno `PORT`)
 - **Parámetro global de proveedor**: La mayoría de endpoints de `/hotels` aceptan `?provider=mock` (por defecto, simulación local sin red) o `?provider=nemo` (integración XML real con Nemo Price Navigator).
 
 ---

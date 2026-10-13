@@ -8,7 +8,21 @@ import { AppModule } from './app.module';
 async function bootstrap(): Promise<void> {
   dotenv.config();
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+    : [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3001',
+      ];
+  if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+  }
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+  });
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
     whitelist: true,
@@ -27,7 +41,7 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = Number(process.env.PORT) || 3000;
+  const port = Number(process.env.PORT) || 3001;
   await app.listen(port);
 }
 

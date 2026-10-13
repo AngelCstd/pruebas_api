@@ -21,7 +21,7 @@ function parseNumber(raw: string | undefined, defaultValue: number): number {
 
 export function loadConfiguration(): AppConfig {
   return {
-    port: parseNumber(process.env.PORT, 3000),
+    port: parseNumber(process.env.PORT, 3001),
     nodeEnv: process.env.NODE_ENV ?? 'development',
     defaultProvider: parseProvider(process.env.DEFAULT_HOTEL_PROVIDER),
     nemo: {

@@ -2,7 +2,7 @@
 
 ## Interactive API documentation
 
-Start the service with `npm run start:dev`, then open [Swagger UI](http://localhost:3000/api/docs). The OpenAPI JSON is available at `http://localhost:3000/api/docs-json`. Use the configured `PORT` when it differs from 3000.
+Start the service with `npm run start:dev`, then open [Swagger UI](http://localhost:3001/api/docs). The OpenAPI JSON is available at `http://localhost:3001/api/docs-json`. Use the configured `PORT` when it differs from 3001.
 
 The UI groups all 15 active endpoints under **Hotels** and **Catalogs**, with query parameters, request schemas, examples, and response statuses. Use **Try it out** with `provider=mock` for offline hotel requests; Nemo requests require supplier configuration. Search returns HTTP 201; the other active operations return HTTP 200 on success. Commented booking handlers remain disabled and are excluded from the specification.
 
@@ -773,8 +773,8 @@ Unknown query parameters and invalid or repeated scalar values return HTTP 400.
 | `GET /hotels/catalog` | Required nonblank `destinationCode`; `activeOnly=true\|false` defaults to `true`; `provider=mock\|nemo` | `destinationCode`, `destinationName`, `hotelCount`, `hotels: {hotelCode,hotelName,rating,latitude,longitude,city,country}[]` |
 
 ```sh
-curl 'http://localhost:3000/hotels/catalog?destinationCode=2262&activeOnly=true&provider=mock'
-curl 'http://localhost:3000/hotels/MOCK-2262-001/details?provider=mock&language=es'
+curl 'http://localhost:3001/hotels/catalog?destinationCode=2262&activeOnly=true&provider=mock'
+curl 'http://localhost:3001/hotels/MOCK-2262-001/details?provider=mock&language=es'
 ```
 
 Mock catalog returns two active properties and one additional inactive property

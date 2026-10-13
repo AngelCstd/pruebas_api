@@ -54,11 +54,11 @@ Para evitar saturar el repositorio con millones de registros, el archivo de dest
 ```bash
 npm run dev
 ```
-El servicio iniciará en `http://localhost:3000`.
+El servicio iniciará en `http://localhost:3001`.
 
 ### Acceder a la Documentación Interactiva (Swagger UI)
 Abre en tu navegador:
-👉 **`http://localhost:3000/api/docs`**
+👉 **`http://localhost:3001/api/docs`**
 
 ### Ejecutar la Suite de Pruebas Automatizadas
 ```bash
@@ -78,7 +78,7 @@ Ejecuta 12 suites de tests en menos de 1.5 segundos:
 
 ### A. Búsqueda de Hoteles con Filtros Enriquecidos
 ```bash
-curl -s -X POST "http://localhost:3000/hotels/search?provider=mock" \
+curl -s -X POST "http://localhost:3001/hotels/search?provider=mock" \
   -H "Content-Type: application/json" \
   -d '{
     "destinationId": "2262",
@@ -94,43 +94,43 @@ curl -s -X POST "http://localhost:3000/hotels/search?provider=mock" \
 
 ### B. Verificación de Tarifa en Vivo
 ```bash
-curl -s -X POST "http://localhost:3000/hotels/validate?provider=mock" \
+curl -s -X POST "http://localhost:3001/hotels/validate?provider=mock" \
   -H "Content-Type: application/json" \
   -d '{"tripProductId": "MOCK-TX_SEARCH_1740000000000_123456-1"}' | jq .
 ```
 
 ### C. Consulta de Gastos de Cancelación
 ```bash
-curl -s -X POST "http://localhost:3000/hotels/cancellation-fees?provider=mock" \
+curl -s -X POST "http://localhost:3001/hotels/cancellation-fees?provider=mock" \
   -H "Content-Type: application/json" \
   -d '{"tripProductId": "MOCK-TX_SEARCH_1740000000000_123456-1"}' | jq .
 ```
 
 ### D. Ficha Técnica y Fotos del Hotel
 ```bash
-curl -s "http://localhost:3000/hotels/MOCK-2262-001/details?provider=mock&language=es" | jq .
+curl -s "http://localhost:3001/hotels/MOCK-2262-001/details?provider=mock&language=es" | jq .
 ```
 
 ### E. Catálogo Maestro de Hoteles por Destino
 ```bash
-curl -s "http://localhost:3000/hotels/catalog?destinationCode=2262&activeOnly=true&provider=mock" | jq .
+curl -s "http://localhost:3001/hotels/catalog?destinationCode=2262&activeOnly=true&provider=mock" | jq .
 ```
 
 ### F. Autocompletado de Destinos
 ```bash
-curl -s "http://localhost:3000/locations/search?q=cancun&language=es&limit=5" | jq .
+curl -s "http://localhost:3001/locations/search?q=cancun&language=es&limit=5" | jq .
 ```
 
 ### G. Catálogos Paginados y Filtrados
 ```bash
 # Amenidades filtradas por grupo y texto
-curl -s "http://localhost:3000/catalogs/amenities?groupCode=MNO.HTL.AMT.SER&search=toalla&page=1&limit=10" | jq .
+curl -s "http://localhost:3001/catalogs/amenities?groupCode=MNO.HTL.AMT.SER&search=toalla&page=1&limit=10" | jq .
 
 # Proveedores mayoristas
-curl -s "http://localhost:3000/catalogs/suppliers?search=expedia" | jq .
+curl -s "http://localhost:3001/catalogs/suppliers?search=expedia" | jq .
 
 # Tipos de habitación y capacidad
-curl -s "http://localhost:3000/catalogs/room-types" | jq .
+curl -s "http://localhost:3001/catalogs/room-types" | jq .
 ```
 
 ---

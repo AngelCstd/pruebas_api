@@ -12,7 +12,7 @@ Cada trabajo solo implementa lo que dice este contrato. Si algo no está aquí, 
 
 ## 0. Reglas generales
 
-- El back (`http://localhost:3000`) es de pruebas y se va a migrar a Care. **Sin login, sin API key, sin interruptor de activación.** No sobreingenierizar.
+- El back (`http://localhost:3001`) es de pruebas y se va a migrar a Care. **Sin login, sin API key, sin interruptor de activación.** No sobreingenierizar.
 - El back habilita CORS para cualquier origen (temporal).
 - El parámetro `?provider=` acepta `all` | `mock` | `convenio` | `nemo`. El cliente usa `all` para buscar y `mock` para reservar.
 - Todo en español en textos para el usuario; código y nombres de campo en inglés, como ya están.
@@ -163,7 +163,7 @@ export interface NemuHotelsClient {
 
 Valores por defecto del cliente: `searchHotels` → `provider='all'`; `getHotelDetails`/`validateRate`/`getCancellationFees` → `provider='all'` (el back enruta por el prefijo del id); `bookHotel`, `getBooking`, `cancelBooking`, `listBookings` → `provider='mock'`.
 
-Errores del cliente: una clase `NemuApiError` con `status: number`, `message: string`, `code?: string` (el `code` del cuerpo si viene) y `isTimeout: boolean`. Configuración: `NEXT_PUBLIC_NEMU_API_URL` (por defecto `http://localhost:3000`), timeout 15 s.
+Errores del cliente: una clase `NemuApiError` con `status: number`, `message: string`, `code?: string` (el `code` del cuerpo si viene) y `isTimeout: boolean`. Configuración: `NEXT_PUBLIC_NEMU_API_URL` (por defecto `http://localhost:3001`), timeout 15 s.
 
 ## 5. Flujo del front (para el FRONT)
 

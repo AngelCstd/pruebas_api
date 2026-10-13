@@ -13,7 +13,7 @@ El servicio backend en **NestJS** (`hotel-provider-service`) ha alcanzado la fas
 * **Compilación**: TypeScript compila al 100% con `strict: true` y `noImplicitAny: true` (**0 errores**).
 * **Calidad de Código**: **Cero usos explícitos de `any`** en todo el código fuente (verificado automáticamente por análisis de AST en las pruebas).
 * **Pruebas Automatizadas**: **43 pruebas** ejecutándose y pasando en verde con `npm test`.
-* **Documentación Interactiva**: **Swagger / OpenAPI** montado y operativo en `http://localhost:3000/api/docs`.
+* **Documentación Interactiva**: **Swagger / OpenAPI** montado y operativo en `http://localhost:3001/api/docs`.
 
 ---
 
@@ -62,7 +62,7 @@ El servicio backend en **NestJS** (`hotel-provider-service`) ha alcanzado la fas
 ### Fase 5: Documentación y OpenAPI / Swagger
 - [x] Instalación e integración de `@nestjs/swagger` y `swagger-ui-express`.
 - [x] Decoradores `@ApiTags`, `@ApiOperation`, `@ApiResponse` y `@ApiProperty` en todos los controladores y DTOs activos.
-- [x] Interfaz interactiva Swagger UI lista en `http://localhost:3000/api/docs`.
+- [x] Interfaz interactiva Swagger UI lista en `http://localhost:3001/api/docs`.
 - [x] Prueba automatizada que valida la generación del OpenAPI schema en `tests/swagger.test.js`.
 
 ### Fase 6: Catálogo de Destinos (`hotel_destinations`)
