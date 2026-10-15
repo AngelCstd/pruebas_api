@@ -87,7 +87,13 @@ export class HotelService {
     return this.bookings.cancelBooking(locator, dto, provider);
   }
 
-  public listBookings(provider: ProviderType, limit: number, status?: ListedBookingStatus, tenantId?: string): Promise<BookingListResult> {
-    return this.bookings.listBookings(provider, limit, status, tenantId);
+  public listBookings(
+    provider: ProviderType,
+    limit: number,
+    status?: ListedBookingStatus,
+    tenantId?: string,
+    organizationId?: string,
+  ): Promise<BookingListResult> {
+    return this.bookings.listBookings(provider, limit, status, tenantId, organizationId);
   }
 }

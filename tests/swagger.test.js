@@ -13,7 +13,7 @@ const hotelRoutes = {
   '/hotels/catalog': ['get', 200, ['destinationCode', 'activeOnly', 'provider', 'tenantId']],
   '/hotels/{hotelCode}/details': ['get', 200, ['language', 'provider', 'tenantId']],
   '/hotels/book': ['post', 201, ['provider']],
-  '/hotels/bookings': ['get', 200, ['limit', 'provider', 'status', 'tenantId']],
+  '/hotels/bookings': ['get', 200, ['limit', 'organizationId', 'provider', 'status', 'tenantId']],
   '/hotels/bookings/{locator}': ['get', 200, ['provider', 'tenantId']],
   '/hotels/bookings/{locator}/cancel': ['post', 200, ['provider']],
 };

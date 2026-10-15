@@ -18,5 +18,5 @@ export interface ICareReservationRepository {
   holdCredit(input: HoldCreditInput): Promise<HoldCreditResult>;
   releaseCredit(tenantId: string, tripServiceId: string): Promise<ReleaseCreditResult>;
   createReservation(payload: CreateReservationPayload): Promise<CreateReservationResult>;
-  listReservations(tenantId: string, limit: number, status?: ListedBookingStatus): Promise<readonly BookingSummary[]>;
+  listReservations(tenantId: string, limit: number, status?: ListedBookingStatus, organizationId?: string): Promise<readonly BookingSummary[]>;
 }

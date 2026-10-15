@@ -160,11 +160,13 @@ export class SupabaseCareReservationRepository implements ICareReservationReposi
     tenantId: string,
     limit: number,
     status?: ListedBookingStatus,
+    organizationId?: string,
   ): Promise<readonly BookingSummary[]> {
     const client = this.getClient();
     if (status === 'FAILED') return [];
     let query = client.from('hotel_reservations_v').select(RESERVATION_COLUMNS)
       .eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(limit);
+    if (organizationId) query = query.eq('client_organization_id', organizationId);
     if (status === 'CANCELLED') query = query.eq('booking_status', 'CANCELLED');
     if (status === 'BOOKED') query = query.neq('booking_status', 'CANCELLED');
     const { data, error } = await query.returns<ReservationRow[]>();

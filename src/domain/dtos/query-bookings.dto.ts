@@ -18,6 +18,13 @@ export class QueryBookingsDto {
   public tenantId?: string;
 
   @IsOptional()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(100)
+  @ApiPropertyOptional({ type: String, description: 'Filter bookings by client organization', example: 'org_example' })
+  public organizationId?: string;
+
+  @IsOptional()
   @IsEnum(ProviderType)
   @ApiPropertyOptional({ enum: ProviderType, default: ProviderType.MOCK })
   public provider?: ProviderType;

@@ -137,7 +137,13 @@ export class HotelController {
   @ApiResponse({ status: 501, description: 'Booking is not enabled for this provider.' })
   @ApiResponse({ status: 503, description: 'Booking operation store unavailable.' })
   public listBookings(@Query() dto: QueryBookingsDto): Promise<BookingListResult> {
-    return this.hotelService.listBookings(dto.provider ?? ProviderType.MOCK, dto.limit ?? 50, dto.status, dto.tenantId);
+    return this.hotelService.listBookings(
+      dto.provider ?? ProviderType.MOCK,
+      dto.limit ?? 50,
+      dto.status,
+      dto.tenantId,
+      dto.organizationId,
+    );
   }
 
   @Get('bookings/:locator')

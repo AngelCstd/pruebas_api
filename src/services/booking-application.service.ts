@@ -163,10 +163,11 @@ export class BookingApplicationService {
     limit = 50,
     status?: ListedBookingStatus,
     tenantIdValue?: string,
+    organizationId?: string,
   ): Promise<BookingListResult> {
     this.requireMock(provider);
     const tenantId = this.requireTenant(tenantIdValue);
-    return { items: await this.care.listReservations(tenantId, limit, status) };
+    return { items: await this.care.listReservations(tenantId, limit, status, organizationId) };
   }
 
   private async resolveLeadName(tenantId: string, dto: BookHotelDto): Promise<string> {

@@ -16,7 +16,7 @@ export interface InMemoryCareReservationOptions {
   readonly tenantId?: string;
   readonly clients?: readonly ClientCredit[];
   readonly persons?: readonly PersonSummary[];
-  readonly reservations?: readonly BookingSummary[];
+  readonly reservations?: readonly (BookingSummary & { readonly clientOrganizationId?: string })[];
   readonly holdResult?: HoldCreditResult;
   readonly createResult?: CreateReservationResult;
 }
@@ -32,13 +32,21 @@ export class InMemoryCareReservationRepository implements ICareReservationReposi
 
   private readonly clients: { readonly tenantId: string; readonly value: ClientCredit }[];
   private readonly persons: { readonly tenantId: string; readonly value: PersonSummary }[];
-  private readonly reservations: { readonly tenantId: string; readonly value: BookingSummary }[];
+  private readonly reservations: {
+    readonly tenantId: string;
+    readonly clientOrganizationId?: string;
+    readonly value: BookingSummary;
+  }[];
 
   public constructor(options: InMemoryCareReservationOptions = {}) {
     const tenantId = options.tenantId ?? 'tenant-a';
     this.clients = structuredClone(options.clients ?? []).map((value) => ({ tenantId, value }));
     this.persons = structuredClone(options.persons ?? []).map((value) => ({ tenantId, value }));
-    this.reservations = structuredClone(options.reservations ?? []).map((value) => ({ tenantId, value }));
+    this.reservations = (options.reservations ?? []).map((value) => {
+      const clientOrganizationId = (value as { readonly clientOrganizationId?: string }).clientOrganizationId
+        ?? this.clients.find((client) => client.tenantId === tenantId && client.value.name === value.clientName)?.value.organizationId;
+      return { tenantId, clientOrganizationId, value: structuredClone(value) };
+    });
     this.holdResult = structuredClone(options.holdResult ?? {
       ok: true, utilizationId: 'cutl_test', replay: false, available: 100_000, currency: 'MXN',
     });
@@ -99,27 +107,31 @@ export class InMemoryCareReservationRepository implements ICareReservationReposi
       replay: false,
     } satisfies CreateReservationResult;
     if (result.ok) {
-      this.reservations.push({ tenantId: payload.tenantId, value: {
-        operationId: payload.operationId,
-        provider: ProviderType.MOCK,
-        status: payload.providerStatus === 'CANCELLED' ? 'CANCELLED' : 'BOOKED',
-        bookingLocator: payload.providerBookingRef,
-        supplierConfirmationCode: payload.supplierConfirmationCode,
-        clientReference: payload.clientReference,
-        hotelCode: payload.hotel.code,
-        hotelName: payload.hotel.name,
-        checkIn: payload.hotel.checkIn,
-        checkOut: payload.hotel.checkOut,
-        totalPrice: { amount: payload.amount, currency: payload.currency },
-        leadPassengerName: this.leadName(payload),
-        createdAt: new Date().toISOString(),
-        cancelledAt: null,
-        clientName: this.clients.find((client) => client.tenantId === payload.tenantId
-          && client.value.organizationId === payload.clientOrganizationId)?.value.name ?? null,
-        tripId: result.tripId,
-        outstanding: payload.amount,
-        dueAt: result.dueAt,
-      } });
+      this.reservations.push({
+        tenantId: payload.tenantId,
+        clientOrganizationId: payload.clientOrganizationId,
+        value: {
+          operationId: payload.operationId,
+          provider: ProviderType.MOCK,
+          status: payload.providerStatus === 'CANCELLED' ? 'CANCELLED' : 'BOOKED',
+          bookingLocator: payload.providerBookingRef,
+          supplierConfirmationCode: payload.supplierConfirmationCode,
+          clientReference: payload.clientReference,
+          hotelCode: payload.hotel.code,
+          hotelName: payload.hotel.name,
+          checkIn: payload.hotel.checkIn,
+          checkOut: payload.hotel.checkOut,
+          totalPrice: { amount: payload.amount, currency: payload.currency },
+          leadPassengerName: this.leadName(payload),
+          createdAt: new Date().toISOString(),
+          cancelledAt: null,
+          clientName: this.clients.find((client) => client.tenantId === payload.tenantId
+            && client.value.organizationId === payload.clientOrganizationId)?.value.name ?? null,
+          tripId: result.tripId,
+          outstanding: payload.amount,
+          dueAt: result.dueAt,
+        },
+      });
     }
     return structuredClone(result);
   }
@@ -128,10 +140,13 @@ export class InMemoryCareReservationRepository implements ICareReservationReposi
     tenantId: string,
     limit: number,
     status?: ListedBookingStatus,
+    organizationId?: string,
   ): Promise<readonly BookingSummary[]> {
     if (status === 'FAILED') return [];
-    return this.reservations.filter((item) => item.tenantId === tenantId).map((item) => structuredClone(item.value))
-      .filter((reservation) => status === undefined || reservation.status === status)
+    return this.reservations.filter((item) => item.tenantId === tenantId)
+      .filter((item) => !organizationId || item.clientOrganizationId === organizationId)
+      .filter((item) => status === undefined || item.value.status === status)
+      .map((item) => structuredClone(item.value))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .slice(0, limit);
   }

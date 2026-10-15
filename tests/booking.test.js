@@ -12,6 +12,7 @@ const { ProviderType } = require('../dist/domain/enums/provider.enum');
 const { BookHotelDto } = require('../dist/domain/dtos/book-hotel.dto');
 const { QueryClientsDto } = require('../dist/domain/dtos/query-clients.dto');
 const { QueryPersonsDto } = require('../dist/domain/dtos/query-persons.dto');
+const { QueryBookingsDto } = require('../dist/domain/dtos/query-bookings.dto');
 
 const searchDto = {
   destinationId: '2262', checkIn: '2027-11-10', checkOut: '2027-11-13',
@@ -234,6 +235,39 @@ test('Care booking list maps new fields, includes CANCELLED and returns no FAILE
   assert.deepEqual(all.items[0], cancelled);
   assert.equal((await service.listBookings(ProviderType.MOCK, 50, 'CANCELLED', dto.tenantId)).items.length, 1);
   assert.equal((await service.listBookings(ProviderType.MOCK, 50, 'FAILED', dto.tenantId)).items.length, 0);
+});
+
+test('Care booking list filters by organizationId and QueryBookingsDto validates', async () => {
+  const reservationA = {
+    operationId: 'hbo-org-a', provider: ProviderType.MOCK, status: 'BOOKED', bookingLocator: 'LOC-A',
+    supplierConfirmationCode: 'CONF-A', clientReference: '', hotelCode: 'H-A', hotelName: 'Hotel A',
+    checkIn: '2027-12-01', checkOut: '2027-12-03', totalPrice: { amount: 1000, currency: 'MXN' },
+    leadPassengerName: 'Carlos Mendez', createdAt: '2027-01-01T00:00:00.000Z', cancelledAt: null,
+    clientName: 'Acme', tripId: 'trp-a', outstanding: 1000, dueAt: '2027-02-01', clientOrganizationId: 'org-a',
+  };
+  const reservationZ = {
+    operationId: 'hbo-org-z', provider: ProviderType.MOCK, status: 'BOOKED', bookingLocator: 'LOC-Z',
+    supplierConfirmationCode: 'CONF-Z', clientReference: '', hotelCode: 'H-Z', hotelName: 'Hotel Z',
+    checkIn: '2027-12-01', checkOut: '2027-12-03', totalPrice: { amount: 2000, currency: 'MXN' },
+    leadPassengerName: 'Otro Cliente', createdAt: '2027-01-02T00:00:00.000Z', cancelledAt: null,
+    clientName: 'Zulu', tripId: 'trp-z', outstanding: 2000, dueAt: '2027-02-01', clientOrganizationId: 'org-z',
+  };
+  const { service, dto } = await fixture({ reservations: [reservationA, reservationZ] });
+  const all = await service.listBookings(ProviderType.MOCK, 50, undefined, dto.tenantId);
+  assert.equal(all.items.length, 2);
+  const onlyOrgA = await service.listBookings(ProviderType.MOCK, 50, undefined, dto.tenantId, 'org-a');
+  assert.equal(onlyOrgA.items.length, 1);
+  assert.equal(onlyOrgA.items[0].operationId, 'hbo-org-a');
+  const onlyOrgZ = await service.listBookings(ProviderType.MOCK, 50, undefined, dto.tenantId, 'org-z');
+  assert.equal(onlyOrgZ.items.length, 1);
+  assert.equal(onlyOrgZ.items[0].operationId, 'hbo-org-z');
+  const nonExistent = await service.listBookings(ProviderType.MOCK, 50, undefined, dto.tenantId, 'org-nonexistent');
+  assert.equal(nonExistent.items.length, 0);
+
+  // Validate QueryBookingsDto
+  assert.equal((await validate(plainToInstance(QueryBookingsDto, { organizationId: 'org_123' }))).length, 0);
+  assert((await validate(plainToInstance(QueryBookingsDto, { organizationId: '   ' }))).length > 0);
+  assert((await validate(plainToInstance(QueryBookingsDto, { organizationId: 'a'.repeat(101) }))).length > 0);
 });
 
 test('clients and persons list in name order and apply organization, search and limit', async () => {
