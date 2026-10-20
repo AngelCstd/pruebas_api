@@ -86,9 +86,14 @@ export class SupabaseBookingOperationRepository implements IBookingOperationRepo
     }, 'update lead passenger name');
   }
 
-  public async markBooked(tenantId: string, id: string, result: StoredBookingResult): Promise<BookingOperation> {
+  public async markBooked(
+    tenantId: string,
+    id: string,
+    result: StoredBookingResult,
+    status: 'BOOKED' | 'AWAITING_CONFIRMATION' = 'BOOKED',
+  ): Promise<BookingOperation> {
     return this.updateOne(tenantId, id, {
-      status: 'BOOKED',
+      status,
       booking_locator: result.bookingLocator,
       supplier_confirmation_code: result.supplierConfirmationCode,
       hotel_code: result.hotelInformation.hotelCode,

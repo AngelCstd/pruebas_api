@@ -3,7 +3,10 @@ import { ProviderType } from '../enums/provider.enum';
 import { BookingCancellationResult } from './booking-lifecycle.model';
 import { StoredBookingResult } from './care-reservation.model';
 
-export type BookingOperationStatus = 'PENDING' | 'BOOKED' | 'CANCELLED' | 'FAILED';
+// AWAITING_CONFIRMATION: reserva de convenio ya creada (crédito retenido, reserva real en Care) pero
+// pendiente de que Operaciones la confirme (vía admin_mia, trabajo futuro). Es DISTINTO de PENDING:
+// PENDING es el candado de idempotencia de una operación en curso y se excluye de los listados a propósito.
+export type BookingOperationStatus = 'PENDING' | 'BOOKED' | 'AWAITING_CONFIRMATION' | 'CANCELLED' | 'FAILED';
 export type ListedBookingStatus = Exclude<BookingOperationStatus, 'PENDING'>;
 
 export interface BookingOperation {

@@ -59,7 +59,7 @@ Campos nuevos / modificados del cuerpo (todo lo demás igual: `tenantId`, `tripP
    - Respuesta `{ ok:true, tripId, serviceId, bookingId, hotelDetailId, chargeIds, itemIds, personIds, dueAt, currency, amount, replay }`.
    - Si `ok:false`: RPC `release_hotel_credit_v1`, operación → `FAILED` con `errorCode`, y responder: `PERSON_NOT_FOUND` → `404`; `INVALID_PAYLOAD` / `PERSON_INCOMPLETE` → `400`; resto → `409`; en todos el cuerpo lleva `code` = errorCode y `message`.
    - Aunque falle este paso, el proveedor mock ya reservó en memoria (limitación conocida del mock, sin impacto en Care).
-8. **Cerrar**: marcar la operación `BOOKED` guardando el resultado **más** los ids de Care en `response_payload`.
+8. **Cerrar**: marcar la operación `BOOKED` guardando el resultado **más** los ids de Care en `response_payload`. (Convenio, 20 oct 2026: mismo algoritmo, pero el paso 6 no llama a ningún proveedor externo — "reservar" es solo registrar localmente — y el paso 8 cierra en `AWAITING_CONFIRMATION`, no `BOOKED`.)
 
 ### Respuesta `201`
 Igual que hoy (`BookingResult` + `operationId` + `idempotentReplay`) **más**:
@@ -80,7 +80,7 @@ Lee `public.hotel_reservations_v` filtrando por `tenant_id` (obligatorio, v1.1),
 |---|---|
 | `operationId` | `operation_id` (si es null, `trip_service_id`) |
 | `provider` | `source` en minúsculas (`mock`) |
-| `status` | `booking_status = 'CANCELLED'` → `CANCELLED`; cualquier otro → `BOOKED` |
+| `status` | `booking_status = 'CANCELLED'` → `CANCELLED`; `booking_status = 'PENDING'` → `AWAITING_CONFIRMATION` (convenio, 20 oct 2026); cualquier otro → `BOOKED` |
 | `bookingLocator` | `booking_locator` |
 | `supplierConfirmationCode` | `confirmation_number` |
 | `clientReference` | `client_reference` (o `''`) |
@@ -128,4 +128,4 @@ Todos llegan como `NemuApiError` con `status`, `message`, `code` y **`details`**
 
 ## 8. Fuera de alcance
 
-Cancelación que toque Care, convenio y Nemo (siguen no reservables), excepciones de crédito, facturas, pagos, items por noche (el mock usa un solo item `SERVICE`).
+Cancelación que toque Care, Nemo (sigue sin reservarse), excepciones de crédito, facturas, pagos, items por noche (el mock usa un solo item `SERVICE`). (Reserva de convenio: implementada el 20 oct 2026 — ya no está fuera de alcance; queda `AWAITING_CONFIRMATION` en vez de `BOOKED`, y cómo Operaciones la confirma sigue sin diseñarse.)

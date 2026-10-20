@@ -385,16 +385,16 @@ Consulta el catálogo general de hoteles asignados a un destino en Nemo.
 
 ---
 
-## 6. Reservas temporales con mock
+## 6. Reservas con crédito (mock y convenio)
 
-Las rutas están habilitadas únicamente con `provider=mock`. `convenio` y `nemo` responden `501` con `code: BOOKING_NOT_ENABLED`; `all` responde `400`.
+Las rutas están habilitadas con `provider=mock` y `provider=convenio` (actualizado 20 oct 2026: convenio ya reserva). `nemo` sigue respondiendo `501` con `code: BOOKING_NOT_ENABLED`; `all` responde `400`.
 
-- `POST /hotels/book`: requiere el header `Idempotency-Key` y un `BookHotelDto`. Retiene crédito, reserva en el mock y crea la reserva en Care. Devuelve `BookingResult` con `reservation`, `operationId` e `idempotentReplay`. Las operaciones se reclaman y cierran en `hotel_booking_operations`.
-- `GET /hotels/bookings/:locator`: devuelve el detalle persistido y usa el estado en memoria del mock como respaldo.
+- `POST /hotels/book`: requiere el header `Idempotency-Key` y un `BookHotelDto`. Retiene crédito, reserva en el proveedor (mock o convenio) y crea la reserva en Care. Devuelve `BookingResult` con `reservation`, `operationId` e `idempotentReplay`. Las operaciones se reclaman y cierran en `hotel_booking_operations`. Una reserva de `convenio` no llama a ningún proveedor externo (el catálogo es propio) y cierra con status `AWAITING_CONFIRMATION`, no `BOOKED` — queda pendiente de que Operaciones la confirme (integración todavía sin construir).
+- `GET /hotels/bookings/:locator`: devuelve el detalle persistido y usa el estado en memoria del mock/convenio como respaldo.
 - `POST /hotels/bookings/:locator/cancel`: cancela una reserva; repetir la cancelación devuelve el mismo resultado persistido.
-- `GET /hotels/bookings?tenantId=...&limit=50&status=BOOKED`: lista las reservas de `hotel_reservations_v`. `limit` acepta 1–100 y `status` acepta `BOOKED`, `CANCELLED` o `FAILED`.
+- `GET /hotels/bookings?tenantId=...&limit=50&status=BOOKED`: lista las reservas de `hotel_reservations_v`. `limit` acepta 1–100 y `status` acepta `BOOKED`, `AWAITING_CONFIRMATION`, `CANCELLED` o `FAILED`.
 
-Las tarifas indican si admiten reserva mediante `bookable`, `bookableReason` y `bookingNote`. Solo las tarifas mock tienen `bookable: true`.
+Las tarifas indican si admiten reserva mediante `bookable`, `bookableReason` y `bookingNote`. Las tarifas de mock y convenio tienen `bookable: true` (actualizado 20 oct 2026 — convenio devolvía `false` por error, ya corregido); solo nemo sigue en `false`.
 
 El almacén requiere `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`; el `tenantId` se recibe en cada petición y todas las consultas se filtran por `tenant_id`. Sin configuración, las operaciones mock responden `503`. El esquema está en `database/hotel_booking/01_schema.sql` y debe aplicarlo manualmente el usuario.
 
@@ -438,7 +438,7 @@ Los rechazos de crédito responden `409` con `code` y, cuando aplican, `availabl
 - `outstanding: number | null`
 - `dueAt: string | null`
 
-`booking_status='CANCELLED'` se mapea a `CANCELLED`; cualquier otro estado a `BOOKED`. `status=FAILED` devuelve una lista vacía porque las operaciones fallidas no existen en las tablas de reserva de Care. El detalle y la cancelación siguen leyendo `hotel_booking_operations`.
+`booking_status='CANCELLED'` se mapea a `CANCELLED`; `booking_status='PENDING'` se mapea a `AWAITING_CONFIRMATION` (reservas de convenio, actualizado 20 oct 2026); cualquier otro estado a `BOOKED`. `status=FAILED` devuelve una lista vacía porque las operaciones fallidas no existen en las tablas de reserva de Care. El detalle y la cancelación siguen leyendo `hotel_booking_operations`.
 
 > [!WARNING]
 > `POST /hotels/bookings/:locator/cancel` todavía sólo cancela el mock y marca la operación. No actualiza las tablas de Care ni libera crédito.

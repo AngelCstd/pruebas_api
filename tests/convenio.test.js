@@ -67,9 +67,9 @@ test('convenio search resolves the destination city and prices nights x rooms x 
   const rate = found.rates[0];
   assert.equal(rate.amount, 1500 * 2 * 3);
   assert.equal(rate.currency, 'MXN');
-  assert.equal(rate.bookable, false);
-  assert.equal(rate.bookableReason, 'PENDING_OPERATIONS');
-  assert.equal(rate.bookingNote, 'Reserva pendiente: la confirma Operaciones.');
+  assert.equal(rate.bookable, true);
+  assert.equal(rate.bookableReason, undefined);
+  assert.equal(rate.bookingNote, undefined);
   assert.equal(rate.roomRates.length, 2);
   assert.equal(rate.roomRates[0].boardCode, 'RO');
   assert.equal(rate.cancellationPolicy.refundable, false);
@@ -135,13 +135,28 @@ test('convenio details and catalog map the catalog hotel', async () => {
   assert.equal(catalog.hotels[0].hotelCode, 'CNV-sup_mia_h_1');
 });
 
-test('convenio booking is not enabled yet', async () => {
-  const strategy = new ConvenioHotelStrategy(repository([]), undefined);
-  await assert.rejects(strategy.bookHotel({}), error => {
-    assert.equal(error.getStatus(), 501);
-    assert.equal(error.getResponse().code, 'BOOKING_NOT_ENABLED');
-    return true;
-  });
+test('convenio booking registers locally as pending, and the detail/cancellation round-trip', async () => {
+  const strategy = new ConvenioHotelStrategy(repository([hotel()]), destinations('Cancún'));
+  const search = await strategy.searchHotels(dto);
+  const tripProductId = search.hotels[0].rates[0].tripProductId;
+  const booking = await strategy.bookHotel({ tenantId: dto.tenantId, tripProductId, clientReference: 'CLIENT-CNV-1' });
+  assert.equal(booking.bookingStatus, 'PendingConfirmation');
+  assert.equal(booking.totalPrice.amount, 9000);
+  assert.equal(booking.totalPrice.currency, 'MXN');
+  assert.equal(booking.hotelInformation.hotelCode, 'CNV-sup_mia_h_1');
+  assert.equal(booking.clientReference, 'CLIENT-CNV-1');
+
+  const detail = await strategy.getBookingDetail(booking.bookingLocator);
+  assert.equal(detail.bookingLocator, booking.bookingLocator);
+  assert.equal(detail.bookingStatus, 'PendingConfirmation');
+  await assert.rejects(strategy.getBookingDetail('UNKNOWN'), NotFoundException);
+
+  const cancellation = await strategy.cancelBooking(booking.bookingLocator, {});
+  assert.equal(cancellation.cancellationStatus, 'Cancelled');
+  assert.equal(cancellation.penaltyFee.amount, 0);
+  assert.equal(cancellation.refundAmount.amount, booking.totalPrice.amount);
+  assert.deepEqual(await strategy.cancelBooking(booking.bookingLocator, {}), cancellation);
+  await assert.rejects(strategy.cancelBooking('UNKNOWN', {}), NotFoundException);
 });
 
 function fakeExternal(hotels, fail) {

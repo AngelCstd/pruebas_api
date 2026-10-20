@@ -46,7 +46,7 @@ export class BookingApplicationService {
     provider: ProviderType,
     idempotencyKey: string | undefined,
   ): Promise<IdempotentBookingResult> {
-    this.requireMock(provider);
+    this.requireBookableProvider(provider);
     const tenantId = this.requireTenant(dto.tenantId);
     if (!idempotencyKey || !IDEMPOTENCY_KEY.test(idempotencyKey)) {
       throw new BadRequestException('Idempotency-Key header is required and must have a valid format.');
@@ -54,7 +54,7 @@ export class BookingApplicationService {
 
     const fingerprint = this.bookingFingerprint(dto);
     const claim = await this.operations.claim(tenantId, {
-      provider: ProviderType.MOCK,
+      provider,
       idempotencyKey,
       requestFingerprint: fingerprint,
       clientReference: dto.clientReference,
@@ -66,7 +66,7 @@ export class BookingApplicationService {
       if (operation.requestFingerprint !== fingerprint) {
         throw this.conflict('IDEMPOTENCY_KEY_REUSED', 'Idempotency-Key was already used with different content.');
       }
-      if (operation.status === 'BOOKED' || operation.status === 'CANCELLED') {
+      if (operation.status === 'BOOKED' || operation.status === 'AWAITING_CONFIRMATION' || operation.status === 'CANCELLED') {
         if (!operation.responsePayload) {
           throw new ServiceUnavailableException('Stored booking operation has no response payload.');
         }
@@ -86,7 +86,7 @@ export class BookingApplicationService {
     let creditHeld = false;
     let reservationCreated = false;
     try {
-      const strategy = this.strategyFactory.resolve(ProviderType.MOCK);
+      const strategy = this.strategyFactory.resolve(provider);
       const validation = await strategy.validateRate({ tenantId, tripProductId: dto.tripProductId });
       if (validation.validatedPrice.priceChanged) {
         throw this.conflict('PRICE_CHANGED', 'The hotel rate price changed. Please repeat the search.');
@@ -106,12 +106,13 @@ export class BookingApplicationService {
       creditHeld = true;
 
       const providerResult = await strategy.bookHotel(dto);
-      const careResult = await this.care.createReservation(this.reservationPayload(dto, operation.id, providerResult));
+      const careResult = await this.care.createReservation(this.reservationPayload(dto, operation.id, provider, providerResult));
       if (!careResult.ok) throw this.createReservationException(careResult);
       reservationCreated = true;
 
       const result = this.withReservation(providerResult, careResult);
-      const booked = await this.operations.markBooked(tenantId, operation.id, result);
+      const bookedStatus = provider === ProviderType.CONVENIO ? 'AWAITING_CONFIRMATION' : 'BOOKED';
+      const booked = await this.operations.markBooked(tenantId, operation.id, result, bookedStatus);
       return { ...result, operationId: booked.id, idempotentReplay: false };
     } catch (error: unknown) {
       if (reservationCreated) {
@@ -137,11 +138,11 @@ export class BookingApplicationService {
   }
 
   public async getBookingDetail(locator: string, provider: ProviderType, tenantIdValue?: string): Promise<BookingDetailResult> {
-    this.requireMock(provider);
+    this.requireBookableProvider(provider);
     const tenantId = this.requireTenant(tenantIdValue);
     const operation = await this.operations.findByLocator(tenantId, locator);
     if (operation?.responsePayload) return this.toDetail(operation);
-    return this.strategyFactory.resolve(ProviderType.MOCK).getBookingDetail(locator);
+    return this.strategyFactory.resolve(provider).getBookingDetail(locator);
   }
 
   public async cancelBooking(
@@ -149,11 +150,11 @@ export class BookingApplicationService {
     dto: CancelBookingDto,
     provider: ProviderType,
   ): Promise<BookingCancellationResult> {
-    this.requireMock(provider);
+    this.requireBookableProvider(provider);
     const tenantId = this.requireTenant(dto.tenantId);
     const operation = await this.operations.findByLocator(tenantId, locator);
     if (operation?.status === 'CANCELLED' && operation.cancellationPayload) return operation.cancellationPayload;
-    const result = await this.strategyFactory.resolve(ProviderType.MOCK).cancelBooking(locator, dto);
+    const result = await this.strategyFactory.resolve(provider).cancelBooking(locator, dto);
     if (operation) await this.operations.markCancelled(tenantId, operation.id, result);
     return result;
   }
@@ -165,7 +166,7 @@ export class BookingApplicationService {
     tenantIdValue?: string,
     organizationId?: string,
   ): Promise<BookingListResult> {
-    this.requireMock(provider);
+    this.requireBookableProvider(provider);
     const tenantId = this.requireTenant(tenantIdValue);
     return { items: await this.care.listReservations(tenantId, limit, status, organizationId) };
   }
@@ -189,13 +190,21 @@ export class BookingApplicationService {
     return `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() || lead.personId || '';
   }
 
-  private reservationPayload(dto: BookHotelDto, operationId: string, result: BookingResult): CreateReservationPayload {
+  private reservationPayload(
+    dto: BookHotelDto,
+    operationId: string,
+    provider: ProviderType,
+    result: BookingResult,
+  ): CreateReservationPayload {
+    const isConvenio = provider === ProviderType.CONVENIO;
     return {
       tenantId: this.requireTenant(dto.tenantId),
       operationId,
       clientOrganizationId: dto.clientOrganizationId,
-      source: 'MOCK',
-      providerLabel: 'Mock provider',
+      source: isConvenio ? 'CONVENIO' : 'MOCK',
+      providerLabel: isConvenio ? 'Convenio provider' : 'Mock provider',
+      // Convenio se crea pendiente de confirmación por Operaciones; mock (y nemo, aún bloqueado) confirman de inmediato.
+      bookingStatus: isConvenio ? 'PENDING' : 'CONFIRMED',
       hotel: {
         code: result.hotelInformation.hotelCode,
         name: result.hotelInformation.hotelName,
@@ -249,8 +258,8 @@ export class BookingApplicationService {
     return `svc_${separator >= 0 ? operationId.slice(separator + 1) : operationId}`;
   }
 
-  private requireMock(provider: ProviderType): void {
-    if (provider === ProviderType.MOCK) return;
+  private requireBookableProvider(provider: ProviderType): asserts provider is ProviderType.MOCK | ProviderType.CONVENIO {
+    if (provider === ProviderType.MOCK || provider === ProviderType.CONVENIO) return;
     if (provider === ProviderType.ALL) {
       throw new BadRequestException('Booking is not available with provider=all; use the provider of the selected rate.');
     }

@@ -112,8 +112,9 @@ export class InMemoryCareReservationRepository implements ICareReservationReposi
         clientOrganizationId: payload.clientOrganizationId,
         value: {
           operationId: payload.operationId,
-          provider: ProviderType.MOCK,
-          status: payload.providerStatus === 'CANCELLED' ? 'CANCELLED' : 'BOOKED',
+          provider: payload.source === 'CONVENIO' ? ProviderType.CONVENIO : ProviderType.MOCK,
+          status: payload.providerStatus === 'CANCELLED' ? 'CANCELLED'
+            : payload.bookingStatus === 'PENDING' ? 'AWAITING_CONFIRMATION' : 'BOOKED',
           bookingLocator: payload.providerBookingRef,
           supplierConfirmationCode: payload.supplierConfirmationCode,
           clientReference: payload.clientReference,

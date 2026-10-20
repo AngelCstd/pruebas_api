@@ -168,7 +168,8 @@ export class SupabaseCareReservationRepository implements ICareReservationReposi
       .eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(limit);
     if (organizationId) query = query.eq('client_organization_id', organizationId);
     if (status === 'CANCELLED') query = query.eq('booking_status', 'CANCELLED');
-    if (status === 'BOOKED') query = query.neq('booking_status', 'CANCELLED');
+    if (status === 'AWAITING_CONFIRMATION') query = query.eq('booking_status', 'PENDING');
+    if (status === 'BOOKED') query = query.not('booking_status', 'in', '("CANCELLED","PENDING")');
     const { data, error } = await query.returns<ReservationRow[]>();
     if (error) this.unavailable('list hotel reservations', error.message);
     return (data ?? []).map((row) => this.toSummary(row));
@@ -197,7 +198,8 @@ export class SupabaseCareReservationRepository implements ICareReservationReposi
     return {
       operationId: row.operation_id ?? row.trip_service_id,
       provider: (row.source ?? 'MOCK').toLowerCase() as Exclude<ProviderType, ProviderType.ALL>,
-      status: row.booking_status === 'CANCELLED' ? 'CANCELLED' : 'BOOKED',
+      status: row.booking_status === 'CANCELLED' ? 'CANCELLED'
+        : row.booking_status === 'PENDING' ? 'AWAITING_CONFIRMATION' : 'BOOKED',
       bookingLocator: row.booking_locator,
       supplierConfirmationCode: row.confirmation_number,
       clientReference: row.client_reference ?? '',

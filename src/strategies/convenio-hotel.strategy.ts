@@ -1,4 +1,4 @@
-import { BadRequestException, HttpException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { BoardType } from '../domain/enums/board-type.enum';
 import { ProviderType } from '../domain/enums/provider.enum';
 import { CancelBookingDto } from '../domain/dtos/cancel-booking.dto';
@@ -46,6 +46,9 @@ interface ParsedRate {
  */
 @Injectable()
 export class ConvenioHotelStrategy implements HotelProviderStrategy {
+  private readonly bookings = new Map<string, BookingDetailResult>();
+  private readonly cancellations = new Map<string, BookingCancellationResult>();
+
   public constructor(
     @Inject(CONVENIO_HOTEL_REPOSITORY) private readonly hotels: IConvenioHotelRepository,
     @Optional() @Inject(DESTINATION_REPOSITORY) private readonly destinations?: IDestinationRepository,
@@ -133,23 +136,62 @@ export class ConvenioHotelStrategy implements HotelProviderStrategy {
     };
   }
 
-  public async bookHotel(_dto: BookHotelDto): Promise<BookingResult> {
-    throw this.bookingDisabled();
+  /**
+   * No hay proveedor externo que confirme: "reservar" es registrar la reserva localmente. La reserva
+   * queda pendiente de que Operaciones la confirme (ver bookingStatus propagado a Care por el servicio).
+   */
+  public async bookHotel(dto: BookHotelDto): Promise<BookingResult> {
+    const tenantId = this.requireTenant(dto.tenantId);
+    const { hotel, parsed } = await this.requireRate(tenantId, dto.tripProductId);
+    const nights = this.calculateNights(parsed.checkIn, parsed.checkOut);
+    const booking: BookingResult = {
+      bookingLocator: this.createId('CNV_BOOK'),
+      supplierConfirmationCode: this.createId('CNV_CONF'),
+      clientReference: dto.clientReference,
+      creationDate: new Date().toISOString(),
+      bookingStatus: 'PendingConfirmation',
+      totalPrice: { amount: this.stayAmount(hotel, parsed.rooms, nights), currency: hotel.currency },
+      hotelInformation: {
+        hotelCode: `${CONVENIO_HOTEL_CODE_PREFIX}${hotel.supplierId}`,
+        hotelName: hotel.hotelName,
+        checkIn: parsed.checkIn,
+        checkOut: parsed.checkOut,
+      },
+    };
+    this.bookings.set(booking.bookingLocator, {
+      bookingLocator: booking.bookingLocator,
+      supplierConfirmationCode: booking.supplierConfirmationCode,
+      clientReference: booking.clientReference,
+      bookingStatus: booking.bookingStatus,
+      totalPrice: { ...booking.totalPrice },
+      hotelInformation: { ...booking.hotelInformation },
+    });
+    return booking;
   }
 
-  public async getBookingDetail(_locator: string): Promise<BookingDetailResult> {
-    throw this.bookingDisabled();
+  public async getBookingDetail(locator: string): Promise<BookingDetailResult> {
+    const booking = this.bookings.get(locator);
+    if (!booking) throw new NotFoundException('Convenio booking not found.');
+    return { ...booking, totalPrice: { ...booking.totalPrice }, hotelInformation: { ...booking.hotelInformation } };
   }
 
-  public async cancelBooking(_locator: string, _dto: CancelBookingDto): Promise<BookingCancellationResult> {
-    throw this.bookingDisabled();
-  }
-
-  private bookingDisabled(): HttpException {
-    return new HttpException({
-      statusCode: 501, message: 'Booking convenio hotels is not enabled yet.',
-      error: 'Not Implemented', code: 'BOOKING_NOT_ENABLED',
-    }, 501);
+  // Sin política de cancelación modelada para convenio todavía (ver CANCELLATION_NOTE): se cancela sin penalización.
+  public async cancelBooking(locator: string, _dto: CancelBookingDto): Promise<BookingCancellationResult> {
+    const booking = this.bookings.get(locator);
+    if (!booking) throw new NotFoundException('Convenio booking not found.');
+    let cancellation = this.cancellations.get(locator);
+    if (!cancellation) {
+      cancellation = {
+        bookingLocator: locator,
+        cancellationStatus: 'Cancelled',
+        cancellationReference: this.createId('CNV_CANCEL'),
+        penaltyFee: { amount: 0, currency: booking.totalPrice.currency },
+        refundAmount: { amount: booking.totalPrice.amount, currency: booking.totalPrice.currency },
+      };
+      booking.bookingStatus = cancellation.cancellationStatus;
+      this.cancellations.set(locator, cancellation);
+    }
+    return { ...cancellation, penaltyFee: { ...cancellation.penaltyFee }, refundAmount: { ...cancellation.refundAmount } };
   }
 
   /** El convenio debe estar vigente al menos hasta la llegada. */
@@ -193,9 +235,7 @@ export class ConvenioHotelStrategy implements HotelProviderStrategy {
         boardDescription: board.description,
       })),
       cancellationPolicy: { refundable: false, note: CANCELLATION_NOTE },
-      bookable: false,
-      bookableReason: 'PENDING_OPERATIONS',
-      bookingNote: 'Reserva pendiente: la confirma Operaciones.',
+      bookable: true,
       ...(hotel.rateIncludesTax !== null ? { taxesIncluded: hotel.rateIncludesTax } : {}),
     };
     return {

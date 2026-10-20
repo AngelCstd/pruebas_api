@@ -3,6 +3,13 @@
 -- BORRADOR. Lo corre el usuario a mano. Probado en una base local con el esquema de Care (sin triggers
 -- ni políticas reales): puede haber diferencias en tu base. Las llama el back con la llave de servicio.
 --
+-- create_hotel_reservation_v1 AHORA ESTÁ VERSIONADA como migración real en
+-- noktos-care-foundation/supabase/migrations/20261020130000_hotel_reservation_booking_status_v1.sql
+-- (soporta bookingStatus='PENDING' para reservas de convenio). Esa migración es la fuente de
+-- verdad para esa función de aquí en adelante; esta copia se mantiene en sincronía por referencia,
+-- pero resolve_reservation_person_v1/hold_hotel_credit_v1/release_hotel_credit_v1 siguen siendo
+-- SOLO este borrador (no versionadas todavía).
+--
 -- Orden de uso por reserva (lo hace el back):
 --   1. hold_hotel_credit_v1        retiene el crédito del cliente (antes de llamar al proveedor)
 --   2. (el back llama al proveedor)
@@ -166,6 +173,7 @@ $$;
 -- Payload (jsonb, camelCase):
 -- { tenantId, operationId, clientOrganizationId, sellerOrganizationId?,
 --   source: 'MOCK'|'NEMO'|'CONVENIO'|'MANUAL', providerLabel?,
+--   bookingStatus?: 'CONFIRMED'|'PENDING',   -- default 'CONFIRMED'; 'PENDING' para convenio
 --   hotel: { code, name, address?, city?, checkIn:'YYYY-MM-DD', checkOut:'YYYY-MM-DD', supplierOrganizationId? },
 --   providerBookingRef, supplierConfirmationCode, providerStatus?, clientReference?,
 --   amount, currency, cancellationNote?, offerSnapshot?,
@@ -191,6 +199,7 @@ declare
   v_amount numeric := (p_payload->>'amount')::numeric;
   v_source text := coalesce(nullif(btrim(p_payload->>'source'), ''), 'MOCK');
   v_provider_label text := coalesce(nullif(btrim(p_payload->>'providerLabel'), ''), v_source);
+  v_booking_status text := coalesce(nullif(btrim(p_payload->>'bookingStatus'), ''), 'CONFIRMED');
   v_check_in date;
   v_check_out date;
   v_nights integer;
@@ -245,6 +254,9 @@ begin
   end if;
   if v_source not in ('MOCK', 'NEMO', 'CONVENIO', 'MANUAL') then
     raise exception using errcode = 'P0001', message = 'INVALID_PAYLOAD: unknown source';
+  end if;
+  if v_booking_status not in ('CONFIRMED', 'PENDING') then
+    raise exception using errcode = 'P0001', message = 'INVALID_PAYLOAD: bookingStatus must be CONFIRMED or PENDING';
   end if;
   v_check_in := (v_hotel->>'checkIn')::date;
   v_check_out := (v_hotel->>'checkOut')::date;
@@ -410,7 +422,7 @@ begin
     v_service_id, v_tenant, v_trip_id, v_workspace_id, v_client_account_id, 'HOTEL', v_hotel_name, v_provider_label,
     nullif(btrim(v_hotel->>'supplierOrganizationId'), ''),
     (v_check_in::text || 'T00:00:00Z')::timestamptz, (v_check_out::text || 'T00:00:00Z')::timestamptz,
-    'CONFIRMED', 'NOKTOS_HOTEL_' || v_source,
+    v_booking_status, 'NOKTOS_HOTEL_' || v_source,
     jsonb_build_object('hotelCode', v_hotel->>'code', 'clientReference', p_payload->>'clientReference'),
     jsonb_build_object('operationId', v_op, 'source', v_source),
     'CLEAR'
@@ -419,12 +431,12 @@ begin
   for v_room_idx in 1 .. cardinality(v_participants) loop
     insert into public.trip_service_participants (id, tenant_id, trip_id, trip_service_id, trip_participant_id, status)
     values ('tsp_' || v_suffix || '_' || v_room_idx, v_tenant, v_trip_id, v_service_id,
-            v_participant_map->>(v_participants[v_room_idx]), 'CONFIRMED');
+            v_participant_map->>(v_participants[v_room_idx]), v_booking_status);
   end loop;
 
   -- Reserva ------------------------------------------------------------------------------------------------------
   insert into public.bookings (id, tenant_id, trip_id, locator, status, source, external_refs)
-  values (v_booking_id, v_tenant, v_trip_id, p_payload->>'providerBookingRef', 'CONFIRMED', 'NOKTOS_HOTEL_' || v_source,
+  values (v_booking_id, v_tenant, v_trip_id, p_payload->>'providerBookingRef', v_booking_status, 'NOKTOS_HOTEL_' || v_source,
           jsonb_build_object('supplierConfirmationCode', p_payload->>'supplierConfirmationCode',
                              'clientReference', p_payload->>'clientReference', 'operationId', v_op));
   insert into public.booking_service_links (id, tenant_id, trip_id, booking_id, trip_service_id)
@@ -452,7 +464,7 @@ begin
     insert into public.hotel_rooms (id, tenant_id, hotel_service_detail_id, room_type, rate, currency, occupancy, confirmation, status)
     values (v_room_id, v_tenant, v_detail_id, coalesce(nullif(btrim(v_room->>'roomType'), ''), 'STANDARD'),
             round(v_amount / greatest(v_nights * jsonb_array_length(v_rooms), 1), 2), v_currency,
-            cardinality(v_room_people_ids), p_payload->>'supplierConfirmationCode', 'CONFIRMED');
+            cardinality(v_room_people_ids), p_payload->>'supplierConfirmationCode', v_booking_status);
     v_guest_idx := 0;
     foreach v_person_id in array v_room_people_ids loop
       v_guest_idx := v_guest_idx + 1;

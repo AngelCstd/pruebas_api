@@ -58,12 +58,18 @@ export type ReservationPersonPayload =
   | { readonly personId: string }
   | { readonly firstName: string; readonly lastName: string; readonly email?: string; readonly phone?: string };
 
+export type ReservationSource = 'MOCK' | 'CONVENIO';
+export type ReservationProviderLabel = 'Mock provider' | 'Convenio provider';
+/** CONFIRMED para mock/nemo; PENDING para convenio (reserva creada, la confirma Operaciones después). */
+export type ReservationBookingStatus = 'CONFIRMED' | 'PENDING';
+
 export interface CreateReservationPayload {
   readonly tenantId: string;
   readonly operationId: string;
   readonly clientOrganizationId: string;
-  readonly source: 'MOCK';
-  readonly providerLabel: 'Mock provider';
+  readonly source: ReservationSource;
+  readonly providerLabel: ReservationProviderLabel;
+  readonly bookingStatus: ReservationBookingStatus;
   readonly hotel: {
     readonly code: string;
     readonly name: string;

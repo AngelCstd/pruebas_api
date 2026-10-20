@@ -54,10 +54,15 @@ export class InMemoryBookingOperationRepository implements IBookingOperationRepo
     return this.replace(tenantId, this.require(tenantId, id), { leadPassengerName });
   }
 
-  public async markBooked(tenantId: string, id: string, result: StoredBookingResult): Promise<BookingOperation> {
+  public async markBooked(
+    tenantId: string,
+    id: string,
+    result: StoredBookingResult,
+    status: 'BOOKED' | 'AWAITING_CONFIRMATION' = 'BOOKED',
+  ): Promise<BookingOperation> {
     const operation = this.require(tenantId, id);
     return this.replace(tenantId, operation, {
-      status: 'BOOKED',
+      status,
       bookingLocator: result.bookingLocator,
       supplierConfirmationCode: result.supplierConfirmationCode,
       hotelCode: result.hotelInformation.hotelCode,

@@ -38,9 +38,9 @@ Cliente (Care): `createNemuHotelsClient({ tenantId })` agrega `tenantId` a **tod
 
 | Campo | Tipo | Significado |
 |---|---|---|
-| `bookable` | `boolean` | Si hoy se puede reservar esta tarifa desde el back. `mock` = `true`. `convenio` y `nemo` = `false`. |
-| `bookableReason` | `'PENDING_OPERATIONS' \| 'PROVIDER_BOOKING_DISABLED'` (opcional) | Por qué no. Convenio = `PENDING_OPERATIONS`. Nemo = `PROVIDER_BOOKING_DISABLED`. |
-| `bookingNote` | `string` (opcional) | Texto para mostrar. Convenio: `Reserva pendiente: la confirma Operaciones.` |
+| `bookable` | `boolean` | Si hoy se puede reservar esta tarifa desde el back. `mock` = `true`. `nemo` = `false`. **Actualización 20 oct 2026**: `convenio` pasó a `true` (ver `CONTRATO_RESERVAS_V1_2.md`) — al escribir este v1 (2026-10-01) todavía era `false`. |
+| `bookableReason` | `'PENDING_OPERATIONS' \| 'PROVIDER_BOOKING_DISABLED'` (opcional) | Por qué no. Nemo = `PROVIDER_BOOKING_DISABLED`. Convenio ya no usa este campo (dejó de aplicar junto con el cambio de arriba). |
+| `bookingNote` | `string` (opcional) | Texto para mostrar cuando `bookable` es `false`. Ya no aplica a convenio. |
 | `taxesIncluded` | `boolean` (opcional) | `true` = el precio ya incluye impuestos. Convenio = `true` (se capturan "ya con todo"; sale de `rate_includes_tax` del catálogo). `mock` y `nemo` no lo informan (ausente). El front muestra "Precio con impuestos" cuando es `true`. |
 
 Se conservan `HotelItem.source` y `HotelSearchResult.sources` tal como están hoy (`'mock' | 'nemo' | 'convenio'`).
@@ -175,11 +175,11 @@ Pantalla `/reservas`: encabezado, tabla de reservas (de `listBookings`) y botón
 4. **Confirmación**: `bookHotel` con una `Idempotency-Key` nueva por intento (se reutiliza solo si el usuario reintenta el mismo envío). Muestra el localizador.
 
 Reglas de pantalla:
-- Si `rate.bookable === false`, el botón de reservar está **deshabilitado** y se muestra `bookingNote` (convenio: "Reserva pendiente: la confirma Operaciones."). No es un error.
+- Si `rate.bookable === false`, el botón de reservar está **deshabilitado** y se muestra `bookingNote`. No es un error. (Actualización 20 oct 2026: convenio ya no cae en este caso, ver nota en la sección 1.)
 - Si `sources` trae una fuente con `status: 'ERROR'`, avisar discretamente ("No se pudo consultar: Convenio") sin bloquear los resultados de las otras.
 - Los hoteles de convenio no traen `checkInTime`/`checkOutTime` (llegan vacíos): ocultar esos campos si están vacíos.
 - Moneda por tarifa (mock = EUR, convenio = MXN): mostrar siempre la moneda de cada tarifa, nunca sumar entre monedas.
 
 ## 6. Qué NO incluye esta versión
 
-Autenticación, Nemo real, reserva de convenio (la hace Operaciones, diferido), crédito y cobros, facturas, la transacción en la base de Care. Nada de eso se toca.
+Autenticación, Nemo real, crédito y cobros, facturas, la transacción en la base de Care. Nada de eso se toca. (Reserva de convenio: implementada el 20 oct 2026, ver `CONTRATO_RESERVAS_V1_2.md` — ya no está fuera de alcance. Sigue pendiente, en cambio, cómo Operaciones confirma una reserva de convenio ya creada: esa integración todavía no se diseña ni se construye.)

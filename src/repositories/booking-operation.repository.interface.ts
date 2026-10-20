@@ -12,7 +12,12 @@ export interface IBookingOperationRepository {
   claim(tenantId: string, input: CreateBookingOperation): Promise<BookingOperationClaim>;
   retryFailed(tenantId: string, id: string): Promise<BookingOperation | null>;
   updateLeadPassengerName(tenantId: string, id: string, leadPassengerName: string): Promise<BookingOperation>;
-  markBooked(tenantId: string, id: string, result: StoredBookingResult): Promise<BookingOperation>;
+  markBooked(
+    tenantId: string,
+    id: string,
+    result: StoredBookingResult,
+    status?: 'BOOKED' | 'AWAITING_CONFIRMATION',
+  ): Promise<BookingOperation>;
   markFailed(tenantId: string, id: string, failureCode: string): Promise<void>;
   findByLocator(tenantId: string, locator: string): Promise<BookingOperation | null>;
   markCancelled(tenantId: string, id: string, result: BookingCancellationResult): Promise<BookingOperation>;

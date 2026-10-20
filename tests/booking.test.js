@@ -8,6 +8,7 @@ const { CareDirectoryService } = require('../dist/services/care-directory.servic
 const { InMemoryBookingOperationRepository } = require('../dist/repositories/in-memory-booking-operation.repository');
 const { InMemoryCareReservationRepository } = require('../dist/repositories/in-memory-care-reservation.repository');
 const { MockHotelStrategy } = require('../dist/strategies/mock-hotel.strategy');
+const { ConvenioHotelStrategy } = require('../dist/strategies/convenio-hotel.strategy');
 const { ProviderType } = require('../dist/domain/enums/provider.enum');
 const { BookHotelDto } = require('../dist/domain/dtos/book-hotel.dto');
 const { QueryClientsDto } = require('../dist/domain/dtos/query-clients.dto');
@@ -30,6 +31,27 @@ const persons = [
   { personId: 'per-z', fullName: 'Otro Cliente', email: 'otro@example.com', phone: null, organizationId: 'org-z' },
 ];
 
+const CONVENIO_SUPPLIER_ID = 'sup_booking_test_1';
+const CONVENIO_TRIP_PRODUCT_ID = `CNV~${CONVENIO_SUPPLIER_ID}~2027-11-10~2027-11-13~1`;
+
+function convenioHotel(overrides = {}) {
+  return {
+    supplierId: CONVENIO_SUPPLIER_ID, legacyId: '1', hotelName: 'Hotel Convenio Booking Test', rating: 4,
+    address: { street: 'Calle 1', city: 'CDMX', state: 'CDMX', postalCode: '01000', countryCode: 'MX' },
+    latitude: 19.4, longitude: -99.1, description: 'Hotel de prueba', photoUrls: [],
+    agreementExpiresAt: '2030-01-01', currency: 'MXN', ratePerNight: 1000, rateIncludesTax: null,
+    breakfastIncluded: false, breakfastPrice: null, availabilityNotes: null, bookingNotes: null,
+    ...overrides,
+  };
+}
+
+function convenioRepository(hotels) {
+  return {
+    async findByCity() { return hotels; },
+    async findBySupplierId(_tenantId, id) { return hotels.find((item) => item.supplierId === id) ?? null; },
+  };
+}
+
 function bookingDto(tripProductId, clientReference = 'CLIENT-BOOK-1') {
   return {
     tenantId: 'tenant-a', clientOrganizationId: 'org-a', tripProductId, clientReference,
@@ -48,11 +70,22 @@ async function fixture(careOptions = {}) {
   const repository = new InMemoryBookingOperationRepository();
   const care = new InMemoryCareReservationRepository({ clients, persons, ...careOptions });
   const mock = new MockHotelStrategy(undefined);
+  const convenio = new ConvenioHotelStrategy(convenioRepository([convenioHotel()]), undefined);
   const unsupported = { bookHotel() { throw new Error('unsupported strategy must not be called'); } };
-  const factory = { resolve(provider) { return provider === ProviderType.MOCK ? mock : unsupported; } };
+  const factory = {
+    resolve(provider) {
+      if (provider === ProviderType.MOCK) return mock;
+      if (provider === ProviderType.CONVENIO) return convenio;
+      return unsupported;
+    },
+  };
   const service = new BookingApplicationService(factory, repository, care);
   const search = await mock.searchHotels(searchDto);
-  return { repository, care, mock, service, dto: bookingDto(search.hotels[0].rates[0].tripProductId) };
+  return {
+    repository, care, mock, convenio, service,
+    dto: bookingDto(search.hotels[0].rates[0].tripProductId),
+    convenioDto: bookingDto(CONVENIO_TRIP_PRODUCT_ID, 'CLIENT-BOOK-CNV-1'),
+  };
 }
 
 function response(error) {
@@ -197,15 +230,74 @@ test('same idempotency key with different content conflicts and invalid keys ret
   }
 });
 
-test('convenio and nemo return 501, and all returns 400 before client validation', async () => {
+test('nemo still returns 501, and all returns 400 before client validation', async () => {
   const { service, dto } = await fixture();
   const invalidClient = { ...dto, clientOrganizationId: '' };
-  for (const provider of [ProviderType.CONVENIO, ProviderType.NEMO]) {
-    await assert.rejects(service.bookHotel(invalidClient, provider, 'booking-key-007'), error => (
-      error.getStatus() === 501 && response(error).code === 'BOOKING_NOT_ENABLED'
-    ));
-  }
+  await assert.rejects(service.bookHotel(invalidClient, ProviderType.NEMO, 'booking-key-007'), error => (
+    error.getStatus() === 501 && response(error).code === 'BOOKING_NOT_ENABLED'
+  ));
   await assert.rejects(service.bookHotel(invalidClient, ProviderType.ALL, 'booking-key-007'), error => error.getStatus() === 400);
+});
+
+test('convenio booking holds credit, registers the reservation as pending and lists as AWAITING_CONFIRMATION', async () => {
+  const { care, repository, service, convenioDto } = await fixture();
+  const result = await service.bookHotel(convenioDto, ProviderType.CONVENIO, 'booking-key-cnv-001');
+  assert.equal(result.idempotentReplay, false);
+  assert.equal(result.bookingStatus, 'PendingConfirmation');
+  assert.equal(care.holds.length, 1);
+  assert.equal(care.createdReservations[0].source, 'CONVENIO');
+  assert.equal(care.createdReservations[0].providerLabel, 'Convenio provider');
+  assert.equal(care.createdReservations[0].bookingStatus, 'PENDING');
+  assert.equal((await care.listReservations(convenioDto.tenantId, 50))[0].status, 'AWAITING_CONFIRMATION');
+  assert.equal((await repository.list(convenioDto.tenantId, 50))[0].status, 'AWAITING_CONFIRMATION');
+
+  // Same idempotency key replays the stored pending reservation without holding credit or booking again.
+  const replay = await service.bookHotel(convenioDto, ProviderType.CONVENIO, 'booking-key-cnv-001');
+  assert.equal(replay.idempotentReplay, true);
+  assert.equal(replay.bookingLocator, result.bookingLocator); // es la MISMA reserva, no una duplicada
+  assert.equal(replay.operationId, result.operationId);
+  assert.equal(replay.bookingStatus, result.bookingStatus);
+  assert.equal(care.holds.length, 1);
+  assert.equal(care.createdReservations.length, 1);
+
+  // AWAITING_CONFIRMATION se puede filtrar explícitamente y no se confunde con BOOKED.
+  const onlyAwaiting = await repository.list(convenioDto.tenantId, 50, 'AWAITING_CONFIRMATION');
+  assert.equal(onlyAwaiting.length, 1);
+  const onlyBooked = await repository.list(convenioDto.tenantId, 50, 'BOOKED');
+  assert.equal(onlyBooked.length, 0);
+});
+
+test('convenio provider failure releases credit, marks FAILED and can retry with the same key (same mechanism as mock)', async () => {
+  const { care, convenio, repository, service, convenioDto } = await fixture();
+  const original = convenio.bookHotel.bind(convenio);
+  let fail = true;
+  convenio.bookHotel = async value => {
+    if (fail) { fail = false; throw new ServiceUnavailableException('Convenio temporary failure.'); }
+    return original(value);
+  };
+  await assert.rejects(service.bookHotel(convenioDto, ProviderType.CONVENIO, 'booking-key-cnv-fail'), error => error.getStatus() === 503);
+  assert.equal(care.releases.length, 1); // el crédito retenido se libera igual que en mock
+  assert.equal((await repository.list(convenioDto.tenantId, 50, 'FAILED')).length, 1);
+
+  const retried = await service.bookHotel(convenioDto, ProviderType.CONVENIO, 'booking-key-cnv-fail');
+  assert.equal(retried.idempotentReplay, false);
+  assert.equal(retried.bookingStatus, 'PendingConfirmation');
+  assert.equal(care.holds.length, 2); // primer hold liberado, segundo hold del reintento
+  assert.equal((await repository.list(convenioDto.tenantId, 50, 'AWAITING_CONFIRMATION')).length, 1);
+});
+
+test('convenio booking detail and cancellation are reachable the same way as mock bookings', async () => {
+  const { care, service, convenioDto } = await fixture();
+  const booked = await service.bookHotel(convenioDto, ProviderType.CONVENIO, 'booking-key-cnv-002');
+  const detail = await service.getBookingDetail(booked.bookingLocator, ProviderType.CONVENIO, convenioDto.tenantId);
+  assert.equal(detail.bookingLocator, booked.bookingLocator);
+  const cancellation = await service.cancelBooking(booked.bookingLocator, { tenantId: convenioDto.tenantId }, ProviderType.CONVENIO);
+  assert.equal(cancellation.cancellationStatus, 'Cancelled');
+  assert.deepEqual(
+    await service.cancelBooking(booked.bookingLocator, { tenantId: convenioDto.tenantId }, ProviderType.CONVENIO),
+    cancellation,
+  );
+  assert.equal((await care.listReservations(convenioDto.tenantId, 50))[0].status, 'AWAITING_CONFIRMATION');
 });
 
 test('detail remains operation-backed and cancellation remains idempotent without changing Care', async () => {
