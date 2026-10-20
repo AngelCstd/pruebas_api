@@ -241,7 +241,7 @@ export class ConvenioHotelStrategy implements HotelProviderStrategy {
       currency: hotel.currency,
       roomRates: dto.rooms.map((room) => ({
         roomSequence: room.roomSequence,
-        roomType: 'Habitación estándar (tarifa de convenio)',
+        roomType: 'Habitación estándar',
         boardCode: board.code,
         boardDescription: board.description,
       })),
