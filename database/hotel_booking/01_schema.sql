@@ -6,7 +6,9 @@ create table public.hotel_booking_operations (
   provider text not null check (provider in ('mock','nemo','convenio')),
   idempotency_key text not null check (idempotency_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'),
   request_fingerprint text not null check (request_fingerprint ~ '^[a-f0-9]{64}$'),
-  status text not null check (status in ('PENDING','BOOKED','CANCELLED','FAILED')),
+  -- AWAITING_CONFIRMATION: reservas de convenio, creadas de inmediato pero pendientes de que
+  -- Operaciones las confirme (ver ConvenioHotelStrategy.bookHotel / BookingApplicationService).
+  status text not null check (status in ('PENDING','BOOKED','CANCELLED','FAILED','AWAITING_CONFIRMATION')),
   booking_locator text,
   supplier_confirmation_code text,
   client_reference text not null,

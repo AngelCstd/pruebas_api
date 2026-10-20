@@ -74,7 +74,7 @@ test('convenio search resolves the destination city and prices nights x rooms x 
   assert.equal(rate.roomRates[0].boardCode, 'RO');
   assert.equal(rate.cancellationPolicy.refundable, false);
   assert.ok(rate.cancellationPolicy.note);
-  assert.equal(rate.tripProductId, 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~2');
+  assert.equal(rate.tripProductId, 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~2~9000.00');
 });
 
 test('convenio search excludes expired agreements, missing rates and filtered hotels', async () => {
@@ -118,10 +118,42 @@ test('convenio validate re-prices from the catalog and rejects unknown or expire
   assert.equal(validated.validatedPrice.amount, 9000);
   assert.equal(validated.validatedPrice.priceChanged, false);
   assert.equal(validated.availabilityStatus, 'Confirmed');
-  await assert.rejects(strategy.validateRate({ tenantId: dto.tenantId, tripProductId: 'CNV~nope~2026-11-10~2026-11-13~1' }), NotFoundException);
+  await assert.rejects(strategy.validateRate({ tenantId: dto.tenantId, tripProductId: 'CNV~nope~2026-11-10~2026-11-13~1~1500.00' }), NotFoundException);
   await assert.rejects(strategy.validateRate({ tenantId: dto.tenantId, tripProductId: 'garbage' }), NotFoundException);
+  // Formato viejo (sin el componente de precio cotizado) ya no es válido.
+  await assert.rejects(strategy.validateRate({ tenantId: dto.tenantId, tripProductId: 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~1' }), NotFoundException);
   const expired = new ConvenioHotelStrategy(repository([hotel({ agreementExpiresAt: '2026-01-01' })]), destinations('Cancún'));
-  await assert.rejects(expired.validateRate({ tenantId: dto.tenantId, tripProductId: 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~1' }), NotFoundException);
+  await assert.rejects(expired.validateRate({ tenantId: dto.tenantId, tripProductId: 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~1~4500.00' }), NotFoundException);
+});
+
+test('convenio validate detects a catalog price change between the search and the validation', async () => {
+  const hotels = [hotel()];
+  const strategy = new ConvenioHotelStrategy(repository(hotels), destinations('Cancún'));
+  const search = await strategy.searchHotels(dto);
+  const tripProductId = search.hotels[0].rates[0].tripProductId;
+  assert.equal(tripProductId, 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~2~9000.00');
+
+  // El precio del catálogo cambia después de la búsqueda (p. ej. Operaciones lo actualizó).
+  hotels[0].ratePerNight = 1800;
+  const validated = await strategy.validateRate({ tenantId: dto.tenantId, tripProductId });
+  assert.equal(validated.validatedPrice.priceChanged, true);
+  assert.equal(validated.validatedPrice.amount, 1800 * 2 * 3); // precio ACTUAL, no el cotizado
+
+  // Si el precio no cambia, sigue sin marcar priceChanged.
+  hotels[0].ratePerNight = 1500;
+  const unchanged = await strategy.validateRate({ tenantId: dto.tenantId, tripProductId });
+  assert.equal(unchanged.validatedPrice.priceChanged, false);
+  assert.equal(unchanged.validatedPrice.amount, 9000);
+
+  // Un componente de precio con formato inválido (negativo, no numérico) también se rechaza.
+  await assert.rejects(
+    strategy.validateRate({ tenantId: dto.tenantId, tripProductId: 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~2~-1.00' }),
+    NotFoundException,
+  );
+  await assert.rejects(
+    strategy.validateRate({ tenantId: dto.tenantId, tripProductId: 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~2~abc' }),
+    NotFoundException,
+  );
 });
 
 test('convenio details and catalog map the catalog hotel', async () => {
@@ -208,7 +240,7 @@ test('combined routing sends convenio ids to convenio and the rest to the extern
   const convenio = new ConvenioHotelStrategy(repository([hotel()]), destinations('Cancún'));
   const mock = fakeExternal([]);
   const composite = new CompositeHotelStrategy(mock, fakeExternal([]), convenio);
-  const viaConvenio = await composite.validateRate({ tenantId: dto.tenantId, tripProductId: 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~1' });
+  const viaConvenio = await composite.validateRate({ tenantId: dto.tenantId, tripProductId: 'CNV~sup_mia_h_1~2026-11-10~2026-11-13~1~4500.00' });
   assert.equal(viaConvenio.provider, ProviderType.CONVENIO);
   const viaMock = await composite.validateRate({ tripProductId: 'MOCK_TRIP_123' });
   assert.deepEqual(viaMock, { via: 'external', value: { tripProductId: 'MOCK_TRIP_123' } });

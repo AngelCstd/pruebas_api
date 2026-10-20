@@ -32,7 +32,7 @@ const persons = [
 ];
 
 const CONVENIO_SUPPLIER_ID = 'sup_booking_test_1';
-const CONVENIO_TRIP_PRODUCT_ID = `CNV~${CONVENIO_SUPPLIER_ID}~2027-11-10~2027-11-13~1`;
+const CONVENIO_TRIP_PRODUCT_ID = `CNV~${CONVENIO_SUPPLIER_ID}~2027-11-10~2027-11-13~1~3000.00`;
 
 function convenioHotel(overrides = {}) {
   return {
@@ -70,7 +70,10 @@ async function fixture(careOptions = {}) {
   const repository = new InMemoryBookingOperationRepository();
   const care = new InMemoryCareReservationRepository({ clients, persons, ...careOptions });
   const mock = new MockHotelStrategy(undefined);
-  const convenio = new ConvenioHotelStrategy(convenioRepository([convenioHotel()]), undefined);
+  // Se guarda el hotel de convenio en una variable mutable para poder simular, en un test, que el
+  // precio del catálogo cambia entre que se "cotiza" (se construye el tripProductId) y se reserva.
+  const convenioHotels = [convenioHotel()];
+  const convenio = new ConvenioHotelStrategy(convenioRepository(convenioHotels), undefined);
   const unsupported = { bookHotel() { throw new Error('unsupported strategy must not be called'); } };
   const factory = {
     resolve(provider) {
@@ -82,7 +85,7 @@ async function fixture(careOptions = {}) {
   const service = new BookingApplicationService(factory, repository, care);
   const search = await mock.searchHotels(searchDto);
   return {
-    repository, care, mock, convenio, service,
+    repository, care, mock, convenio, convenioHotels, service,
     dto: bookingDto(search.hotels[0].rates[0].tripProductId),
     convenioDto: bookingDto(CONVENIO_TRIP_PRODUCT_ID, 'CLIENT-BOOK-CNV-1'),
   };
@@ -265,6 +268,36 @@ test('convenio booking holds credit, registers the reservation as pending and li
   assert.equal(onlyAwaiting.length, 1);
   const onlyBooked = await repository.list(convenioDto.tenantId, 50, 'BOOKED');
   assert.equal(onlyBooked.length, 0);
+});
+
+test('convenio booking rejects with 409 PRICE_CHANGED when the catalog rate changed since the search, without holding credit or creating a reservation', async () => {
+  const { care, repository, convenioHotels, service, convenioDto } = await fixture();
+  // El precio del catálogo sube DESPUÉS de que se "cotizó" (se armó el tripProductId con ratePerNight=1000).
+  convenioHotels[0].ratePerNight = 1200;
+
+  await assert.rejects(
+    service.bookHotel(convenioDto, ProviderType.CONVENIO, 'booking-key-cnv-price-001'),
+    (error) => {
+      assert.equal(error.getStatus(), 409);
+      assert.equal(response(error).code, 'PRICE_CHANGED');
+      return true;
+    },
+  );
+
+  assert.equal(care.holds.length, 0);
+  assert.equal(care.createdReservations.length, 0);
+  assert.equal((await care.listReservations(convenioDto.tenantId, 50)).length, 0);
+  assert.equal((await repository.list(convenioDto.tenantId, 50, 'FAILED')).length, 1);
+  assert.equal((await repository.list(convenioDto.tenantId, 50, 'AWAITING_CONFIRMATION')).length, 0);
+
+  // Si el precio vuelve a coincidir con el cotizado, reintentar con la misma Idempotency-Key reserva bien.
+  convenioHotels[0].ratePerNight = 1000;
+  const retried = await service.bookHotel(convenioDto, ProviderType.CONVENIO, 'booking-key-cnv-price-001');
+  assert.equal(retried.idempotentReplay, false);
+  assert.equal(retried.bookingStatus, 'PendingConfirmation');
+  assert.equal(retried.totalPrice.amount, 3000);
+  assert.equal(care.holds.length, 1);
+  assert.equal(care.createdReservations.length, 1);
 });
 
 test('convenio provider failure releases credit, marks FAILED and can retry with the same key (same mechanism as mock)', async () => {

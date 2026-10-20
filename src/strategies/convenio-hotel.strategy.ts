@@ -34,6 +34,9 @@ interface ParsedRate {
   readonly checkIn: string;
   readonly checkOut: string;
   readonly rooms: number;
+  /** Precio cotizado al momento de la búsqueda (ver stayAmount), codificado en el tripProductId para
+   *  poder detectar cambios de tarifa del catálogo antes de reservar (ver validateRate). */
+  readonly quotedAmount: number;
 }
 
 /**
@@ -73,14 +76,15 @@ export class ConvenioHotelStrategy implements HotelProviderStrategy {
   public async validateRate(dto: ValidateRateDto): Promise<RateValidationResult> {
     const tenantId = this.requireTenant(dto.tenantId);
     const { hotel, parsed } = await this.requireRate(tenantId, dto.tripProductId);
+    const currentAmount = this.stayAmount(hotel, parsed.rooms, this.calculateNights(parsed.checkIn, parsed.checkOut));
     return {
       transactionId: this.createId('CNV_VALIDATE'),
       provider: ProviderType.CONVENIO,
       tripProductId: dto.tripProductId,
       validatedPrice: {
-        amount: this.stayAmount(hotel, parsed.rooms, this.calculateNights(parsed.checkIn, parsed.checkOut)),
+        amount: currentAmount,
         currency: hotel.currency,
-        priceChanged: false,
+        priceChanged: !this.sameAmount(currentAmount, parsed.quotedAmount),
       },
       availabilityStatus: 'Confirmed',
       rateStatus: 'Available',
@@ -223,10 +227,17 @@ export class ConvenioHotelStrategy implements HotelProviderStrategy {
 
   private toItem(hotel: ConvenioHotel, dto: SearchHotelsDto, nights: number): HotelItem {
     const board = this.board(hotel);
+    const amount = this.stayAmount(hotel, dto.rooms.length, nights);
     const rate: HotelRate = {
-      tripProductId: this.rateId({ supplierId: hotel.supplierId, checkIn: dto.checkIn, checkOut: dto.checkOut, rooms: dto.rooms.length }),
+      tripProductId: this.rateId({
+        supplierId: hotel.supplierId,
+        checkIn: dto.checkIn,
+        checkOut: dto.checkOut,
+        rooms: dto.rooms.length,
+        quotedAmount: amount,
+      }),
       rateClass: 'Convenio',
-      amount: this.stayAmount(hotel, dto.rooms.length, nights),
+      amount,
       currency: hotel.currency,
       roomRates: dto.rooms.map((room) => ({
         roomSequence: room.roomSequence,
@@ -255,21 +266,32 @@ export class ConvenioHotelStrategy implements HotelProviderStrategy {
     return Number(((hotel.ratePerNight ?? 0) * rooms * nights).toFixed(2));
   }
 
+  /**
+   * El precio cotizado se codifica igual que lo redondea stayAmount (2 decimales, vía toFixed) para
+   * que el id sea estable y la comparación en validateRate no sufra imprecisión de punto flotante.
+   */
   private rateId(parsed: ParsedRate): string {
-    return `${CONVENIO_RATE_PREFIX}${parsed.supplierId}~${parsed.checkIn}~${parsed.checkOut}~${parsed.rooms}`;
+    return `${CONVENIO_RATE_PREFIX}${parsed.supplierId}~${parsed.checkIn}~${parsed.checkOut}~${parsed.rooms}~${parsed.quotedAmount.toFixed(2)}`;
   }
 
   private parseRateId(id: string): ParsedRate | null {
     if (!id.startsWith(CONVENIO_RATE_PREFIX)) return null;
     const parts = id.slice(CONVENIO_RATE_PREFIX.length).split('~');
-    if (parts.length !== 4) return null;
-    const [supplierId, checkIn, checkOut, rooms] = parts;
+    if (parts.length !== 5) return null;
+    const [supplierId, checkIn, checkOut, rooms, quotedAmount] = parts;
     const roomCount = Number(rooms);
+    const amount = Number(quotedAmount);
     if (!supplierId || !/^\d{4}-\d{2}-\d{2}$/.test(checkIn) || !/^\d{4}-\d{2}-\d{2}$/.test(checkOut)
-      || !Number.isInteger(roomCount) || roomCount < 1) {
+      || !Number.isInteger(roomCount) || roomCount < 1
+      || !/^\d+\.\d{2}$/.test(quotedAmount) || !Number.isFinite(amount) || amount < 0) {
       return null;
     }
-    return { supplierId, checkIn, checkOut, rooms: roomCount };
+    return { supplierId, checkIn, checkOut, rooms: roomCount, quotedAmount: amount };
+  }
+
+  /** Compara en centavos (enteros) para evitar falsos "cambió el precio" por imprecisión de punto flotante. */
+  private sameAmount(a: number, b: number): boolean {
+    return Math.round(a * 100) === Math.round(b * 100);
   }
 
   private async requireRate(tenantId: string, tripProductId: string): Promise<{ hotel: ConvenioHotel; parsed: ParsedRate }> {
