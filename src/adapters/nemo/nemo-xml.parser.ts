@@ -318,18 +318,24 @@ export class NemoXmlParser {
 
   public parseHotelCatalogResponse(xml: string): HotelCatalogResult {
     const response = this.parseResponse(xml, 'HotelCatalogQueryRS');
-    const hotels = this.collection(response.Hotels, 'HotelSummary').map((hotel) => ({
-      hotelCode: this.requiredString(hotel['@_HotelCode'], 'HotelCode'),
-      hotelName: this.requiredString(hotel['@_HotelName'], 'HotelName'),
-      rating: this.boundedNumber(hotel['@_Rating'], 'Rating', 0, 5),
-      latitude: this.boundedNumber(hotel['@_Latitude'], 'Latitude', -90, 90),
-      longitude: this.boundedNumber(hotel['@_Longitude'], 'Longitude', -180, 180),
-      city: this.requiredString(hotel['@_City'], 'City'), country: this.requiredString(hotel['@_Country'], 'Country'),
+    // La respuesta real anida todo bajo <Details>, no en la raíz (confirmado contra producción,
+    // 2026-10-27) — a diferencia de los demás endpoints de este adapter.
+    const details = this.asRecord(response.Details, 'Details');
+    const hotels = this.collection(details.Hotels, 'Hotel').map((hotel) => ({
+      // HotelDetailId es el id que se usa para pedir detalle del hotel (ver nota en el modelo).
+      hotelCode: this.requiredString(hotel['@_HotelDetailId'], 'HotelDetailId'),
+      supplierId: this.requiredString(hotel['@_SupplierId'], 'SupplierId'),
+      supplierHotelCode: this.requiredString(hotel['@_SupplierHotelCode'], 'SupplierHotelCode'),
+      mphHotelId: this.requiredString(hotel['@_MphHotelId'], 'MphHotelId'),
+      destinationId: this.requiredString(hotel['@_DestinationId'], 'DestinationId'),
+      hotelDetailId: this.requiredString(hotel['@_HotelDetailId'], 'HotelDetailId'),
     }));
-    const hotelCount = this.requiredAmount(response.HotelCount, 'HotelCount');
-    if (!Number.isInteger(hotelCount) || hotelCount !== hotels.length) throw new BadGatewayException('Invalid Nemo HotelCount.');
-    return { destinationCode: this.requiredString(response.DestinationCode, 'DestinationCode'),
-      destinationName: this.requiredString(response.DestinationName, 'DestinationName'), hotelCount, hotels };
+    const nextPageToken = this.optionalString(details.NextPageToken);
+    return {
+      hotelCount: hotels.length,
+      ...(nextPageToken ? { nextPageToken } : {}),
+      hotels,
+    };
   }
 
   public parseBookingResponse(xml: string): BookingResult {
@@ -395,12 +401,6 @@ export class NemoXmlParser {
     const time = this.requiredString(value, label);
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new BadGatewayException(`Invalid Nemo ${label}.`);
     return time;
-  }
-
-  private boundedNumber(value: unknown, label: string, min: number, max: number): number {
-    const number = Number(this.requiredString(value, label));
-    if (!Number.isFinite(number) || number < min || number > max) throw new BadGatewayException(`Invalid Nemo ${label}.`);
-    return number;
   }
 
 }
