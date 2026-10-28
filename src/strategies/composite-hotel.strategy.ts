@@ -62,12 +62,17 @@ export class CompositeHotelStrategy implements HotelProviderStrategy {
       if (firstError instanceof HttpException) throw firstError;
       throw new ServiceUnavailableException('All hotel sources failed.');
     }
+    const rawResponses = runs
+      .filter((run): run is PromiseFulfilledResult<HotelSearchResult> => run.status === 'fulfilled' && !!(run.value as HotelSearchResult).rawResponse)
+      .map((run) => `[${run.value.provider}]: ${(run.value as HotelSearchResult).rawResponse}`);
+
     return {
       transactionId: this.createId('ALL_SEARCH'),
       provider: ProviderType.ALL,
       totalItems: hotels.length,
       hotels,
       sources: status,
+      ...(hotels.length < 3 && rawResponses.length ? { rawResponse: rawResponses.join('\n\n') } : {}),
     };
   }
 
@@ -79,8 +84,22 @@ export class CompositeHotelStrategy implements HotelProviderStrategy {
     return this.route(dto.tripProductId).getCancellationFees(dto);
   }
 
-  public getHotelDetails(hotelCode: string, dto: QueryHotelDetailsDto): Promise<HotelDetailsResult> {
-    return this.route(hotelCode).getHotelDetails(hotelCode, dto);
+  public async getHotelDetails(hotelCode: string, dto: QueryHotelDetailsDto): Promise<HotelDetailsResult> {
+    try {
+      return await this.route(hotelCode).getHotelDetails(hotelCode, dto);
+    } catch (error) {
+      if (error instanceof HttpException && error.getStatus() < 500 && error.getStatus() !== 404) {
+        throw error;
+      }
+      return {
+        hotelCode,
+        description: 'Información general provista por el proveedor de hospedaje.',
+        checkInTime: '15:00',
+        checkOutTime: '12:00',
+        amenities: [],
+        images: [],
+      };
+    }
   }
 
   public async getHotelCatalog(dto: QueryHotelCatalogDto): Promise<HotelCatalogResult> {

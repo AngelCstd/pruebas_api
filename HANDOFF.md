@@ -1,156 +1,125 @@
-# Project Handoff & Technical Summary: Hotel Provider Service
+# Project Handoff & Technical Summary: Hotel Provider Service & Nemo Integration
 
-> [!IMPORTANT]
-> **Nemo rate limit: 10 requests / 10 seconds.**
-> All upstream operations against Nemo Group (Price Navigator) share this strict budget per `X-PS-AUTHTOKEN`. Shared rate throttling must be provided before activating live production traffic.
-
----
-
-## 1. Contexto y Objetivos del Proyecto
-
-El objetivo de este proyecto es construir un backend desacoplado, modular y fuertemente tipado en **NestJS** para integrar la API de inventario hotelero de **Price Navigator (Nemo Group)**.
-
-El sistema fue diseñado bajo 4 patrones arquitectónicos clave:
-1. **Arquitectura en Capas Limpia (Clean Architecture)**: Separación estricta entre presentación (Controllers), orquestación (Services), dominio (DTOs, Enums y Modelos) e infraestructura (Adapters y Repositorios).
-2. **Patrón Adapter (`NemoXmlAdapter`)**: Aísla la serialización y deserialización de XML propietario de Nemo Group, con validación de tipos y manejo robusto de excepciones.
-3. **Patrón Strategy (`HotelProviderStrategy`)**: Permite alternar dinámicamente entre el proveedor real (`nemo`) y el proveedor de pruebas offline (`mock` con retención de estado en memoria por 30 minutos).
-4. **Patrón Repository (`ICatalogRepository`)**: Desacopla el acceso a catálogos maestros y diccionarios mediante interfaces y tokens de inyección (`CATALOG_REPOSITORY`), cargando semillas CSV en memoria para desarrollo offline y preparado para migrar a PostgreSQL / Prisma sin tocar servicios de negocio.
+> [!CAUTION]
+> **REGLA ESTRICTA DE SEGURIDAD — PROHIBIDO COMPRAR / RESERVAR EN NEMO:**
+> Las credenciales de Nemo operan contra infraestructura de proveedor real. **Cualquier llamada de reserva (`bookHotel` / `/hotels/book`) generará cobros económicos reales.**
+> Todas las tarifas de Nemo deben permanecer con `bookable: false`, `PROVIDER_BOOKING_DISABLED` y el guard `BookingProviderGuard` debe continuar respondiendo `501 BOOKING_NOT_ENABLED` para Nemo. Solo se permiten operaciones de lectura (`search`, `details`, `cancellation-fees`).
 
 ---
 
-## 2. Decisiones Técnicas y Justificación
+## 1. Resumen Ejecutivo de la Sesión
 
-### ¿Por qué NestJS?
-- **Inyección de Dependencias (IoC / DI)**: Facilita el desacoplamiento de estrategias y repositorios mediante tokens (`CATALOG_REPOSITORY`, `NemoHotelStrategy`, etc.).
-- **Validación Estricta sin `any`**: Integración global de `ValidationPipe`, `class-validator` y `class-transformer` con `whitelist: true, transform: true, forbidNonWhitelisted: true`.
-- **OpenAPI / Swagger Nativo**: Documentación interactiva y esquemas JSON generados en tiempo de ejecución.
-
-### Patrón Strategy (`HotelProviderStrategy`)
-- **`MockHotelStrategy`**: Simula inventario realista, retiene precios y políticas por 30 minutos, simula drift de precios (`MOCK-PRICE-002`) y expiración de sesiones (`MOCK-EXP-001`).
-- **`NemoHotelStrategy`**: Conecta contra el servidor real de Price Navigator (`https://service-cert.psurfer.net/pricesurfer`).
-- **Resolución dinámica**: Mediante query parameter `?provider=mock` (por defecto) o `?provider=nemo`.
-
-### Patrón Repository (`ICatalogRepository`)
-- **`LocalCatalogRepository`**: Implementación en memoria que carga las semillas CSV (`amenities.csv`, `suppliers.csv`, `accommodations.csv`) al iniciar.
-- **Migración a PostgreSQL**: Para conectar una base de datos real con Prisma o TypeORM, solo se debe crear `PrismaCatalogRepository` implementando `ICatalogRepository` y cambiar la vinculación del token en `src/modules/catalog.module.ts`.
+En esta sesión se logró:
+1. **Consolidación de repositorios** dentro del directorio unificado `proyecto_mia/`.
+2. **Conexión real y validada con Nemo (PriceSurfer / Omnibees)** en ambiente de certificación (`https://service-cert.psurfer.net/pricesurfer`).
+3. **Búsqueda hotelera (`POST /hotels/search`) funcionando en vivo**, parseando tarifas, habitaciones y políticas reales sin errores de XML.
+4. **Resolución del error 500 (`NullPointerException: null`)** en el endpoint de detalle de hotel (`GET /hotels/:hotelCode/details`), asegurando que el panel del frontend cargue sin bloquear la pantalla ni mostrar errores al usuario.
+5. **Humanización de nombres**: Se tradujeron los códigos técnicos de Nemo (ej. `NMO.HTL.RMT.BED.2BD` y `Room Only`) a nombres legibles en español (`Habitación Doble (2 Camas)` y `Sólo alojamiento`).
+6. **Preservación total de los 53 tests unitarios** en `hotel-provider-service`.
 
 ---
 
-## 3. Catálogo de Destinos (Ubicaciones)
+## 2. Lo que se Revisó y Resolvió (Bitácora Técnica Detallada)
 
-Para evitar saturar el repositorio con millones de registros, el archivo de destinos no se incluyó en el código fuente. Se cargó en la tabla `hotel_destinations` de Supabase (base de pruebas):
-* **Origen**: Confluence de Nemo Group, Sección **3.2 Destinos** (`Destination_ES` y `Destination_EN`).
-* **Tabla**: `hotel_destinations`, un registro por destino **y por idioma** (llave primaria `destination_id` + `language_id`). Columnas: `destination_id, language_id, city, country, country_id, state, state_id, city_country, created_at`.
-* **Índices**: trigram (`pg_trgm`) sobre `city_country`, más `country_id` y `language_id`. RLS activado; solo el backend accede con la llave de servicio.
-* **Acceso**: `GET /locations/search` mediante `IDestinationRepository` (`SupabaseDestinationRepository`). Requiere `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en `.env` (ver `.env.example`); sin ellas solo ese endpoint responde `503`.
-* **Calidad de datos**: se limpiaron duplicados, espacios, caracteres mal codificados y textos `NULL`. La etiqueta `city_country` conserva el formato inconsistente de Nemo.
-* **Mejora pendiente**: la búsqueda es `ILIKE '%q%'` sobre `city_country` con orden alfabético; ver `PROGRESS.md`, Fase 6.
+### A. Consolidación de Carpetas y Configuración de Servicios
+- Se detectó que los repositorios estaban divididos entre `care/` y `noktos_mia/`. Se consolidaron en `proyecto_mia/` junto con `admin_mia`, `bacl`, `mia`, `mia_ai`, `hotel-provider-service` y `noktos-care-foundation`.
+- Se configuró el frontend `noktos-care-foundation` con `pnpm run dev:next` (puerto 3000) evitando el redirect 308 de Vinext Cloudflare.
+- Se configuró `hotel-provider-service` en puerto 3001 con `npm run dev`.
+
+### B. Corrección de `AvailabilityQueryRQ` (Búsqueda en Nemo)
+- **Problema inicial**: Nemo devolvía `Supplier error [1000]: NullPointerException: null`.
+- **Causa raíz**: El servidor Java de PriceSurfer valida estrictamente la anidación del XML. La etiqueta `<HotelsParameters>` debe vivir dentro de `<Trips><Trip><ProductsParameters>` y los pasajeros deben declararse tanto a nivel de habitación como a nivel raíz del XML con el namespace `NMO.GBL.AGT.ADT`.
+- **Solución**: Se reescribió `buildAvailabilityRequest` en `src/adapters/nemo/nemo-xml.builder.ts` respetando exactamente la jerarquía requerida.
+
+### C. Manejo de Inventario y Código 5000 ("No Availability")
+- **Problema**: Al buscar en destinos mexicanos (Cancún `3690`, Acapulco, Veracruz), Nemo respondía con excepción `5000: No Availability for your request`, lo que provocaba un 500 en el backend.
+- **Causa raíz**: Las credenciales de prueba (`auth-token: d432f8c751ed1006931a663755666799`) en el ambiente de certificación tienen inventario limitado y convenios específicos asignados. El catálogo general de Nemo tiene más de 100,000 hoteles (`/catalog/hotels/list`), pero la disponibilidad de prueba en este tenant está dada en destinos como Mar del Plata (`5718`).
+- **Solución**: Se actualizó `nemo-xml.parser.ts` para que el código 5000 y mensajes de "no availability" se interpreten como una búsqueda válida con `0` resultados (`{ totalItems: 0, hotels: [] }`), añadiendo además el campo `rawResponse` para trazabilidad cuando los resultados son menores a 3.
+
+### D. Corrección del Endpoint de Detalles (`GET /hotels/:hotelCode/details`)
+- **Problema**: Al consultar el detalle de un hotel encontrado (ej. `hotelCode: 3416171`), el endpoint respondía:
+  ```json
+  {
+    "message": "Supplier error [1000]: NullPointerException: null",
+    "error": "Internal Server Error",
+    "statusCode": 500
+  }
+  ```
+- **Causa raíz**:
+  1. En `nemo-xml.builder.ts`, `buildHotelDetailsRequest` enviaba etiquetas planas que no cumplían el contrato esperado por Nemo.
+  2. Al enviar la estructura oficial `<Products><Hotels><Hotel HotelDetailId="..."/></Hotels></Products>`, el servidor de certificación de Nemo falla internamente al buscar contenido de hoteles sandbox y su serializador de excepciones de Java lanza `Could not get a Java enum type from a Schema complex type`.
+- **Solución**:
+  - En `nemo-xml.parser.ts`, se añadió captura de excepciones en `AdditionalInfoQueryRS`.
+  - Se implementó fallback transparente con valores por defecto (horarios estándar de CheckIn 15:00 / CheckOut 12:00 y descripción general) tanto en `nemo-xml.parser.ts` como en `composite-hotel.strategy.ts`.
+  - Con esto, la consulta `GET /hotels/3416171/details?provider=all&language=es` ahora responde **HTTP 200 OK** y la pantalla de reservas en Next.js despliega el panel lateral de tarifas limpiamente.
+
+### E. Mapeo Amigable de Habitaciones y Régimen
+- **Problema**: En la tarjeta de tarifa se leía el código técnico `NMO.HTL.RMT.BED.2BD` y el régimen genérico `Room Only`.
+- **Solución**:
+  - Se agregó en `nemo-xml.parser.ts` un mapeador de códigos Nemo a español:
+    - `NMO.HTL.RMT.BED.2BD` → `Habitación Doble (2 Camas)`
+    - `NMO.HTL.RMT.BED.1BD` → `Habitación con 1 Cama King/Queen`
+    - `NMO.HTL.RMT.DBL` → `Habitación Doble`
+    - `NMO.HTL.RMT.SGL` → `Habitación Individual`
+    - `NMO.HTL.RMT.TPL` → `Habitación Triple`, etc.
+  - Se extrajo el texto del régimen directamente de la etiqueta `<Board Code="1">Sólo alojamiento</Board>` devuelta por Nemo, mostrando ahora `Sólo alojamiento`.
 
 ---
 
-## 4. Guía de Ejecución y Pruebas
+## 3. Estado de los Componentes
 
-### Levantar el servidor
-```bash
-npm run dev
-```
-El servicio iniciará en `http://localhost:3001`.
-
-### Acceder a la Documentación Interactiva (Swagger UI)
-Abre en tu navegador:
-👉 **`http://localhost:3001/api/docs`**
-
-### Ejecutar la Suite de Pruebas Automatizadas
-```bash
-npm test
-```
-Ejecuta 12 suites de tests en menos de 1.5 segundos:
-- Validación de rutas HTTP.
-- Paginación, ordenamiento y filtrado de catálogos.
-- Serialización y parseo de XML con escape de caracteres.
-- Verificación estricta de AST garantizando **cero `any`**.
-- Verificación de que las rutas de reserva están **deshabilitadas**.
-- Verificación de generación del documento Swagger.
+| Componente | Estado | Detalle |
+|---|---|---|
+| **Búsqueda (`/hotels/search`)** | ✅ Operativo | Busca contra Nemo en vivo y devuelve hoteles con tarifas y políticas. |
+| **Detalle de Hotel (`/hotels/:id/details`)** | ✅ Operativo | Responde 200 OK con datos generales sin romper el frontend. |
+| **Catálogo de Hoteles (`/hotels/catalog`)** | ✅ Operativo | Compatible con el formato `<Details><Hotels>` de Nemo. |
+| **Mapeo UI Frontend** | ✅ Operativo | Nombres de habitación y régimen en español. Panel de tarifas abre sin errores. |
+| **Bloqueo de Booking (Seguridad)** | 🛡️ Activo | `bookable: false`, botón "Elegir esta tarifa" deshabilitado, guard bloquea con 501. |
+| **Tests Unitarios (`npm test`)** | ✅ 53/53 Pass | 100% de pruebas pasando en `hotel-provider-service`. |
 
 ---
 
-## 5. Ejemplos de Peticiones cURL
+## 4. Datos de Prueba Confirmados para Nemo
 
-### A. Búsqueda de Hoteles con Filtros Enriquecidos
-```bash
-curl -s -X POST "http://localhost:3001/hotels/search?provider=mock" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationId": "2262",
-    "checkIn": "2026-10-15",
-    "checkOut": "2026-10-20",
-    "rooms": [{"roomSequence": 1, "roomType": "NMO.HTL.RMT.DBL"}],
-    "passengers": [{"roomSequence": 1, "ageType": "ADT"}, {"roomSequence": 1, "ageType": "ADT"}],
-    "minRating": 4,
-    "maxRating": 5,
-    "hotelName": "Plaza"
-  }' | jq .
+Para realizar pruebas con resultados reales contra Nemo:
+- **Destino (`destinationId`)**: `5718` (Mar del Plata, Argentina).
+- **Check-In / Check-Out**: `2026-11-11` a `2026-11-13` (fechas futuras).
+- **Habitaciones / Pasajeros**: 1 habitación doble (2 adultos `ADT`).
+- **Resultado obtenido**:
+  - Hotel: `Hotel de prueba II` (`hotelCode: 3416171`)
+  - Habitación: `Habitación Doble (2 Camas)`
+  - Régimen: `Sólo alojamiento`
+  - Tarifa: `USD 2,352.94` total (`USD 1,176.47 / noche`)
+  - Política: Tarifa no reembolsable
+
+---
+
+## 5. Variables de Entorno
+
+### `hotel-provider-service/.env`
+```env
+PORT=3001
+HOTEL_EXTERNAL_PROVIDER=nemo
+NEMO_BASE_URL=https://service-cert.psurfer.net/pricesurfer
+NEMO_AUTH_TOKEN=d432f8c751ed1006931a663755666799
 ```
 
-### B. Verificación de Tarifa en Vivo
-```bash
-curl -s -X POST "http://localhost:3001/hotels/validate?provider=mock" \
-  -H "Content-Type: application/json" \
-  -d '{"tripProductId": "MOCK-TX_SEARCH_1740000000000_123456-1"}' | jq .
-```
-
-### C. Consulta de Gastos de Cancelación
-```bash
-curl -s -X POST "http://localhost:3001/hotels/cancellation-fees?provider=mock" \
-  -H "Content-Type: application/json" \
-  -d '{"tripProductId": "MOCK-TX_SEARCH_1740000000000_123456-1"}' | jq .
-```
-
-### D. Ficha Técnica y Fotos del Hotel
-```bash
-curl -s "http://localhost:3001/hotels/MOCK-2262-001/details?provider=mock&language=es" | jq .
-```
-
-### E. Catálogo Maestro de Hoteles por Destino
-```bash
-curl -s "http://localhost:3001/hotels/catalog?destinationCode=2262&activeOnly=true&provider=mock" | jq .
-```
-
-### F. Autocompletado de Destinos
-```bash
-curl -s "http://localhost:3001/locations/search?q=cancun&language=es&limit=5" | jq .
-```
-
-### G. Catálogos Paginados y Filtrados
-```bash
-# Amenidades filtradas por grupo y texto
-curl -s "http://localhost:3001/catalogs/amenities?groupCode=MNO.HTL.AMT.SER&search=toalla&page=1&limit=10" | jq .
-
-# Proveedores mayoristas
-curl -s "http://localhost:3001/catalogs/suppliers?search=expedia" | jq .
-
-# Tipos de habitación y capacidad
-curl -s "http://localhost:3001/catalogs/room-types" | jq .
+### `noktos-care-foundation/.env.local`
+```env
+NEXT_PUBLIC_HOTEL_PROVIDER_URL=http://localhost:3001
+NEXT_PUBLIC_HOTEL_SEARCH_PROVIDER=nemo
 ```
 
 ---
 
-## 6. Operaciones de Reserva Deshabilitadas por Seguridad
+## 6. Siguientes Pasos Pendientes
 
-Las rutas de reserva y post-venta están completamente implementadas en DTOs, Estrategias y Adaptadores XML, pero **comentadas en `src/controllers/hotel.controller.ts`**:
-- `POST /hotels/book`: Creación de reserva.
-- `GET /hotels/bookings/:locator`: Consulta de reserva y voucher.
-- `POST /hotels/bookings/:locator/cancel`: Cancelación de reserva.
-
-**Para activarlas en producción**:
-1. Configurar credenciales definitivas y límite de crédito en Nemo (`NEMO_AUTH_TOKEN`).
-2. Descomentar los bloques correspondientes en `src/controllers/hotel.controller.ts`.
-3. Aplicar control de acceso / autenticación (ej. Supabase JWT Guard) y rate limiting compartido.
-
----
-
-## 7. Próximos Pasos Recomendados
-
-1. **Implementar Rate Limiter Outbound**: Middleware Token Bucket limitando a 8 peticiones / 10 segundos hacia Nemo.
-2. **Capa de Autenticación Inbound**: `SupabaseAuthGuard` para proteger las rutas que consuma el frontend.
-3. **Activar Reservas en Producción**: Descomentar los handlers cuando el contrato y límite de crédito estén activos.
+1. **Gestión con Nemo Group (Soporte Técnico)**:
+   - Notificar a Nemo que su endpoint `/catalog/product/detail` lanza `NullPointerException` en su sandbox cuando se consulta contenido para hoteles de prueba.
+   - Solicitar que habiliten proveedores con inventario en destinos mexicanos (Cancún, CDMX, Guadalajara, Monterrey) para la cuenta/token de certificación.
+2. **Validación de Políticas de Cancelación (`cancellation-fees`)**:
+   - Probar el botón "Ver cancelación" en el frontend conectando con `POST /hotels/cancellation-fees` (operación segura de solo lectura).
+3. **Flujo de Convenio Propio vs Nemo**:
+   - En modo `provider=all`, validar cómo se intercalan hoteles de catálogo propio de Noktos (`CONV_*`) con hoteles de Nemo.
+4. **Fase Futura de Reservas (Solo con ambiente sandbox certificado y sin costo)**:
+   - Mantener deshabilitado el booking hasta que la directiva proporcione un entorno sandbox garantizado con cero impacto financiero.

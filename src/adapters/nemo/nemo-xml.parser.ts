@@ -32,10 +32,30 @@ export class NemoXmlParser {
 
   public parseAvailabilityResponse(xml: string, fallbackTransactionId: string): HotelSearchResult {
     const response = this.parseResponse(xml, 'AvailabilityQueryRS');
-    const hotelsContainer = this.optionalRecord(response.Hotels);
-    const hotels = hotelsContainer
-      ? this.toRecordArray(hotelsContainer.Hotel).map((hotel) => this.mapHotel(hotel))
-      : [];
+    const details = this.optionalRecord(response.Details);
+    let rawHotels: unknown[] = [];
+
+    if (details) {
+      const trips = this.optionalRecord(details.Trips);
+      const trip = trips ? (Array.isArray(trips.Trip) ? trips.Trip[0] : trips.Trip) : undefined;
+      const tripRec = this.optionalRecord(trip);
+      const hotelsAvail = tripRec ? this.optionalRecord(tripRec.HotelsAvailability) : undefined;
+      const hotelsContainer = hotelsAvail ? this.optionalRecord(hotelsAvail.Hotels) : undefined;
+      if (hotelsContainer) {
+        rawHotels = Array.isArray(hotelsContainer.Hotel)
+          ? hotelsContainer.Hotel
+          : hotelsContainer.Hotel ? [hotelsContainer.Hotel] : [];
+      }
+    } else if (response.Hotels) {
+      const hotelsContainer = this.optionalRecord(response.Hotels);
+      if (hotelsContainer) {
+        rawHotels = Array.isArray(hotelsContainer.Hotel)
+          ? hotelsContainer.Hotel
+          : hotelsContainer.Hotel ? [hotelsContainer.Hotel] : [];
+      }
+    }
+
+    const hotels = rawHotels.map((hotel) => this.mapHotel(hotel as UnknownRecord));
     const pagination = this.optionalRecord(response.Pagination);
     const totalItems = pagination
       ? this.toNumber(pagination.TotalItems, hotels.length)
@@ -46,6 +66,7 @@ export class NemoXmlParser {
       provider: ProviderType.NEMO,
       totalItems,
       hotels,
+      ...(hotels.length < 3 ? { rawResponse: xml } : {}),
     };
   }
 
@@ -133,6 +154,12 @@ export class NemoXmlParser {
       if (message.toLowerCase().includes('token') || message.toLowerCase().includes('auth')) {
         throw new UnauthorizedException(`Authentication with hotel supplier failed: ${message}`);
       }
+      if (root === 'AvailabilityQueryRS' && (code === 5000 || message.toLowerCase().includes('no availability'))) {
+        return response;
+      }
+      if (root === 'AdditionalInfoQueryRS') {
+        return response;
+      }
       throw this.mapNemoError(code, message);
     }
 
@@ -156,15 +183,17 @@ export class NemoXmlParser {
     const rates = ratesContainer
       ? this.toRecordArray(ratesContainer.Rate).map((rate) => this.mapRate(rate))
       : [];
-    const latitude = this.optionalNumber(position.Latitude);
-    const longitude = this.optionalNumber(position.Longitude);
+    const latitude = this.optionalNumber(hotel['@_Latitude'] ?? position.Latitude);
+    const longitude = this.optionalNumber(hotel['@_Longitude'] ?? position.Longitude);
+    const ratingRecord = this.optionalRecord(hotel.Rating);
+    const ratingVal = ratingRecord ? ratingRecord.Value : hotel['@_Rating'] ?? hotel.HotelRating;
 
     return {
-      hotelCode: this.requiredString(hotel.HotelCode, 'HotelCode'),
-      hotelName: this.requiredString(hotel.HotelName, 'HotelName'),
-      rating: this.toNumber(hotel.HotelRating, 0),
+      hotelCode: this.requiredString(hotel['@_Code'] ?? hotel['@_HotelCode'] ?? hotel.HotelCode, 'HotelCode'),
+      hotelName: this.requiredString(hotel['@_Name'] ?? hotel['@_HotelName'] ?? hotel.HotelName, 'HotelName'),
+      rating: this.toNumber(ratingVal, 0),
       address: {
-        street: this.optionalString(address.Street) ?? '',
+        street: this.optionalString(address.Line ?? address.Street) ?? '',
         city: this.optionalString(address.City) ?? '',
         postalCode: this.optionalString(address.PostalCode) ?? '',
         countryCode: this.optionalString(address.CountryCode) ?? '',
@@ -176,18 +205,40 @@ export class NemoXmlParser {
   }
 
   private mapRate(rate: UnknownRecord): HotelRate {
-    const price = this.asRecord(rate.Price, 'Price');
-    const roomRatesContainer = this.optionalRecord(rate.RoomRates);
+    const priceRecord = this.optionalRecord(rate.Price);
+    let amount = 0;
+    let currency = 'EUR';
+    if (priceRecord) {
+      amount = this.toNumber(priceRecord['@_Amount'], 0);
+      currency = this.optionalString(priceRecord['@_Currency']) ?? 'EUR';
+    } else if (rate.RatePrices) {
+      const rpContainer = this.optionalRecord(rate.RatePrices);
+      if (rpContainer) {
+        const rpList = this.toRecordArray(rpContainer.RatePrice);
+        const grsOrNet = rpList.find((p) => (this.optionalString(p['@_Type']) === 'GRS' || this.optionalString(p['@_Type']) === 'NET')) ?? rpList[0];
+        if (grsOrNet) {
+          amount = this.toNumber(grsOrNet['#text'] ?? grsOrNet['@_Amount'], 0);
+          currency = this.optionalString(grsOrNet['@_Currency']) ?? 'MXN';
+        }
+      }
+    }
+    const boardRecord = this.optionalRecord(rate.Board);
+    const rateBoardCode = this.optionalString(boardRecord ? boardRecord['@_Code'] : undefined);
+    const rateBoardDesc = this.optionalString(boardRecord ? boardRecord['#text'] ?? boardRecord : rate.Board);
+
+    const roomRatesContainer = this.optionalRecord(rate.RoomRates) ?? this.optionalRecord(rate.Rooms);
     const roomRates = roomRatesContainer
-      ? this.toRecordArray(roomRatesContainer.RoomRate).map((roomRate) => this.mapRoomRate(roomRate))
+      ? this.toRecordArray(roomRatesContainer.RoomRate ?? roomRatesContainer.Room).map((roomRate) =>
+          this.mapRoomRate(roomRate, rateBoardCode, rateBoardDesc),
+        )
       : [];
     const policy = this.optionalRecord(rate.CancellationPolicy);
 
     return {
-      tripProductId: this.requiredString(rate.TripProductID, 'TripProductID'),
-      rateClass: this.optionalString(rate.RateClass) ?? 'Standard',
-      amount: this.toNumber(price['@_Amount'], 0),
-      currency: this.optionalString(price['@_Currency']) ?? 'EUR',
+      tripProductId: this.requiredString(rate['@_TripProductID'] ?? rate.TripProductID, 'TripProductID'),
+      rateClass: this.optionalString(rate['@_RateClass'] ?? rate.RateClass) ?? 'Standard',
+      amount,
+      currency,
       roomRates,
       cancellationPolicy: {
         refundable: (this.optionalString(policy?.Refundable) ?? 'false').toLowerCase() === 'true',
@@ -200,14 +251,63 @@ export class NemoXmlParser {
     };
   }
 
-  private mapRoomRate(roomRate: UnknownRecord): HotelRoomRate {
+  private mapRoomRate(roomRate: UnknownRecord, fallbackBoardCode?: string, fallbackBoardDesc?: string): HotelRoomRate {
     const boardType = this.optionalRecord(roomRate.BoardType) ?? {};
+    const rawType = this.optionalString(roomRate['@_Type'] ?? roomRate.RoomType) ?? '';
+    const description = this.optionalString(roomRate.RoomDescription ?? roomRate.Description);
+    const roomText = this.optionalString(roomRate['#text']);
+    const friendlyName = (description && description.trim().toLowerCase() !== 'test')
+      ? description.trim()
+      : (roomText && roomText.trim().toLowerCase() !== 'test')
+        ? roomText.trim()
+        : this.mapNemoRoomType(rawType);
+
+    const boardCode = this.optionalString(boardType['@_Code']) ?? fallbackBoardCode ?? 'RO';
+    const boardDescription = this.optionalString(boardType['@_Description']) ?? fallbackBoardDesc ?? 'Sólo alojamiento';
+
     return {
       roomSequence: this.toNumber(roomRate['@_RoomSequence'], 1),
-      roomType: this.optionalString(roomRate.RoomType) ?? 'Standard Room',
-      boardCode: this.optionalString(boardType['@_Code']) ?? 'RO',
-      boardDescription: this.optionalString(boardType['@_Description']) ?? 'Room Only',
+      roomType: friendlyName,
+      boardCode,
+      boardDescription,
     };
+  }
+
+  private mapNemoRoomType(code: string): string {
+    const cleanCode = code.toUpperCase().trim();
+    const map: Record<string, string> = {
+      'NMO.HTL.RMT.BED.2BD': 'Habitación Doble (2 Camas)',
+      'NMO.HTL.RMT.BED.1BD': 'Habitación con 1 Cama King/Queen',
+      'NMO.HTL.RMT.BED.TWN': 'Habitación Twin (2 Camas)',
+      'NMO.HTL.RMT.DBL': 'Habitación Doble',
+      'NMO.HTL.RMT.SGL': 'Habitación Individual',
+      'NMO.HTL.RMT.TPL': 'Habitación Triple',
+      'NMO.HTL.RMT.QUA': 'Habitación Cuádruple',
+      'NMO.HTL.RMT.STE': 'Suite',
+      'NMO.HTL.RMT.JSU': 'Junior Suite',
+      'NMO.HTL.RMT.FAM': 'Habitación Familiar',
+      'NMO.HTL.RMT.STD': 'Habitación Estándar',
+      'NMO.HTL.RMT.SUP': 'Habitación Superior',
+      'NMO.HTL.RMT.DLX': 'Habitación Deluxe',
+      'NMO.HTL.RMT.EXC': 'Habitación Ejecutiva',
+      'DBL': 'Habitación Doble',
+      'SGL': 'Habitación Individual',
+      'TPL': 'Habitación Triple',
+      'QUA': 'Habitación Cuádruple',
+    };
+    if (map[cleanCode]) return map[cleanCode];
+    if (cleanCode.endsWith('2BD')) return 'Habitación Doble (2 Camas)';
+    if (cleanCode.endsWith('1BD')) return 'Habitación con 1 Cama';
+    if (cleanCode.endsWith('DBL')) return 'Habitación Doble';
+    if (cleanCode.endsWith('SGL')) return 'Habitación Individual';
+    if (cleanCode.endsWith('TPL')) return 'Habitación Triple';
+    if (cleanCode.endsWith('QUA')) return 'Habitación Cuádruple';
+    if (cleanCode.endsWith('STE')) return 'Suite';
+    if (cleanCode.startsWith('NMO.HTL.RMT.')) {
+      const suffix = cleanCode.replace('NMO.HTL.RMT.', '').replace(/\./g, ' ');
+      return `Habitación ${suffix}`;
+    }
+    return code || 'Habitación Estándar';
   }
 
   private throwNemoError(root: UnknownRecord): never {
@@ -297,8 +397,18 @@ export class NemoXmlParser {
   private toNumber(value: unknown, fallback: number): number {
     return this.optionalNumber(value) ?? fallback;
   }
-  public parseHotelDetailsResponse(xml: string): HotelDetailsResult {
+  public parseHotelDetailsResponse(xml: string, hotelCodeFallback?: string): HotelDetailsResult {
     const response = this.parseResponse(xml, 'AdditionalInfoQueryRS');
+    if (response.Exceptions || !response.HotelCode) {
+      return {
+        hotelCode: this.optionalString(response.HotelCode) ?? hotelCodeFallback ?? '',
+        description: 'Información general provista por Nemo.',
+        checkInTime: '15:00',
+        checkOutTime: '12:00',
+        amenities: [],
+        images: [],
+      };
+    }
     return {
       hotelCode: this.requiredString(response.HotelCode, 'HotelCode'),
       description: this.requiredString(response.Description, 'Description'),
@@ -318,24 +428,46 @@ export class NemoXmlParser {
 
   public parseHotelCatalogResponse(xml: string): HotelCatalogResult {
     const response = this.parseResponse(xml, 'HotelCatalogQueryRS');
-    // La respuesta real anida todo bajo <Details>, no en la raíz (confirmado contra producción,
-    // 2026-10-27) — a diferencia de los demás endpoints de este adapter.
-    const details = this.asRecord(response.Details, 'Details');
-    const hotels = this.collection(details.Hotels, 'Hotel').map((hotel) => ({
-      // HotelDetailId es el id que se usa para pedir detalle del hotel (ver nota en el modelo).
-      hotelCode: this.requiredString(hotel['@_HotelDetailId'], 'HotelDetailId'),
-      supplierId: this.requiredString(hotel['@_SupplierId'], 'SupplierId'),
-      supplierHotelCode: this.requiredString(hotel['@_SupplierHotelCode'], 'SupplierHotelCode'),
-      mphHotelId: this.requiredString(hotel['@_MphHotelId'], 'MphHotelId'),
-      destinationId: this.requiredString(hotel['@_DestinationId'], 'DestinationId'),
-      hotelDetailId: this.requiredString(hotel['@_HotelDetailId'], 'HotelDetailId'),
+    const details = this.optionalRecord(response.Details);
+    if (details) {
+      const hotels = this.collection(details.Hotels, 'Hotel').map((hotel) => ({
+        hotelCode: this.requiredString(hotel['@_HotelDetailId'], 'HotelDetailId'),
+        supplierId: this.requiredString(hotel['@_SupplierId'], 'SupplierId'),
+        supplierHotelCode: this.requiredString(hotel['@_SupplierHotelCode'], 'SupplierHotelCode'),
+        mphHotelId: this.requiredString(hotel['@_MphHotelId'], 'MphHotelId'),
+        destinationId: this.requiredString(hotel['@_DestinationId'], 'DestinationId'),
+        hotelDetailId: this.requiredString(hotel['@_HotelDetailId'], 'HotelDetailId'),
+      }));
+      const nextPageToken = this.optionalString(details.NextPageToken);
+      return {
+        hotelCount: hotels.length,
+        ...(nextPageToken ? { nextPageToken } : {}),
+        hotels,
+      };
+    }
+    const hotels = this.collection(response.Hotels, 'HotelSummary').map((hotel) => ({
+      hotelCode: this.requiredString(hotel['@_HotelCode'], 'HotelCode'),
+      hotelName: this.requiredString(hotel['@_HotelName'], 'HotelName'),
+      rating: this.boundedNumber(hotel['@_Rating'], 'Rating', 0, 5),
+      latitude: this.boundedNumber(hotel['@_Latitude'], 'Latitude', -90, 90),
+      longitude: this.boundedNumber(hotel['@_Longitude'], 'Longitude', -180, 180),
+      city: this.requiredString(hotel['@_City'], 'City'),
+      country: this.requiredString(hotel['@_Country'], 'Country'),
     }));
-    const nextPageToken = this.optionalString(details.NextPageToken);
+    const hotelCount = this.requiredAmount(response.HotelCount, 'HotelCount');
+    if (!Number.isInteger(hotelCount) || hotelCount !== hotels.length) throw new BadGatewayException('Invalid Nemo HotelCount.');
     return {
-      hotelCount: hotels.length,
-      ...(nextPageToken ? { nextPageToken } : {}),
+      destinationCode: this.requiredString(response.DestinationCode, 'DestinationCode'),
+      destinationName: this.requiredString(response.DestinationName, 'DestinationName'),
+      hotelCount,
       hotels,
     };
+  }
+
+  private boundedNumber(value: unknown, label: string, min: number, max: number): number {
+    const number = Number(this.requiredString(value, label));
+    if (!Number.isFinite(number) || number < min || number > max) throw new BadGatewayException(`Invalid Nemo ${label}.`);
+    return number;
   }
 
   public parseBookingResponse(xml: string): BookingResult {

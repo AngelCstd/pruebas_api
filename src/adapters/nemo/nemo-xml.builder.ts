@@ -31,47 +31,28 @@ export class NemoXmlBuilder {
     const ratings = (dto.ratings ?? [1, 2, 3, 4, 5]).filter(
       (rating) => rating >= (dto.minRating ?? 1) && rating <= (dto.maxRating ?? 5),
     );
-    const criterion: AvailabilityQueryRQ['HotelsParameters']['Criterion'] = {
-      Rooms: {
-        Room: dto.rooms.map((room) => ({
-          '@_RoomType': room.roomType,
-          '@_RoomSequence': String(room.roomSequence),
-        })),
-      },
-      CheckIn: dto.checkIn,
-      CheckOut: dto.checkOut,
-      Availability: 'CNF',
-      ...(dto.hotelName ? { HotelName: dto.hotelName } : {}),
-      ...(dto.ratings !== undefined || dto.minRating !== undefined || dto.maxRating !== undefined
-        ? { Ratings: ratings.join(',') } : {}),
-      ...(dto.hotelCodeList !== undefined ? { HotelCodeList: dto.hotelCodeList.join(',') } : {}),
-      ...(dto.boardTypes !== undefined ? { BoardTypes: dto.boardTypes.join(',') } : {}),
-    };
+    const rooms = dto.rooms.map((room) => {
+      const roomPassengers = dto.passengers.filter((p) => p.roomSequence === room.roomSequence);
+      const passengersXml = roomPassengers.map((passenger) => {
+        const ageType = passenger.ageType === PassengerAgeType.ADT ? 'ADT' : passenger.ageType === PassengerAgeType.CHD ? 'CHD' : 'INF';
+        return `<Passenger AgeType="${ageType}" RoomSequence="${room.roomSequence}"${passenger.age !== undefined ? ` Age="${passenger.age}"` : ''}/>`;
+      }).join('');
+      return `<Room RoomSequence="${room.roomSequence}"><Passengers>${passengersXml}</Passengers></Room>`;
+    }).join('');
 
-    const request: AvailabilityQueryRQ = {
-      '@_TransactionId': transactionId,
-      '@_TransactionMode': 'Synchronous',
-      GeneralParameters: {
-        PreferedLanguage: 'es',
-        PreferedCurrency: 'EUR',
-      },
-      Trips: { Trip: { Destination: dto.destinationId } },
-      HotelsParameters: { Criterion: criterion },
-      Passengers: {
-        Passenger: dto.passengers.map((passenger): NemoPassengerRequest => ({
-          '@_AgeType': NEMO_AGE_TYPES[passenger.ageType],
-          '@_RoomSequence': String(passenger.roomSequence),
-          ...(passenger.age !== undefined ? { '@_Age': String(passenger.age) } : {}),
-        })),
-      },
-      RequestSet: { FirstItem: '1', ItemsPerPage: '20' },
-    };
+    const rootPassengersXml = dto.passengers.map((passenger) => {
+      const nemoAge = NEMO_AGE_TYPES[passenger.ageType] ?? 'NMO.GBL.AGT.ADT';
+      return `<Passenger AgeType="${nemoAge}" RoomSequence="${passenger.roomSequence}"${passenger.age !== undefined ? ` Age="${passenger.age}"` : ''}/>`;
+    }).join('');
 
-    const document: AvailabilityQueryRQDocument = {
-      '?xml': { '@_version': '1.0', '@_encoding': 'UTF-8' },
-      AvailabilityQueryRQ: request,
-    };
-    return this.xmlBuilder.build(document);
+    const hotelNameTag = dto.hotelName ? `<HotelName>${dto.hotelName}</HotelName>` : '';
+    const ratingsTag = (dto.ratings !== undefined || dto.minRating !== undefined || dto.maxRating !== undefined) && ratings.length
+      ? `<Ratings>${ratings.join(',')}</Ratings>`
+      : '';
+    const hotelCodesTag = dto.hotelCodeList?.length ? `<HotelCodeList>${dto.hotelCodeList.join(',')}</HotelCodeList>` : '';
+    const boardTypesTag = dto.boardTypes?.length ? `<BoardTypes>${dto.boardTypes.join(',')}</BoardTypes>` : '';
+
+    return `<?xml version="1.0" encoding="UTF-8"?><AvailabilityQueryRQ TransactionId="${transactionId}" TransactionMode="Synchronous"><GeneralParameters><PreferedLanguage LanguageCode="ES"/><PreferedCurrency CurrencyCode="MXN"/></GeneralParameters><Trips><Trip><Destination>${dto.destinationId}</Destination><ProductsParameters><HotelsParameters><Criterion><CheckIn>${dto.checkIn}</CheckIn><CheckOut>${dto.checkOut}</CheckOut><Rooms>${rooms}</Rooms><Availability>CNF</Availability>${hotelNameTag}${ratingsTag}${hotelCodesTag}${boardTypesTag}</Criterion></HotelsParameters></ProductsParameters></Trip></Trips><Passengers>${rootPassengersXml}</Passengers></AvailabilityQueryRQ>`;
   }
 
   public buildValidationRequest(dto: { readonly tripProductId: string }, transactionId: string): string {

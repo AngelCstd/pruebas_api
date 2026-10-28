@@ -89,8 +89,11 @@ export class NemoXmlAdapter {
   }
   public getHotelDetails(hotelCode: string, dto: QueryHotelDetailsDto): Promise<HotelDetailsResult> {
     const transactionId = this.createTransactionId();
-    return this.send('/catalog/product/detail', this.builder.buildHotelDetailsRequest(hotelCode, dto, transactionId),
-      (body) => this.parser.parseHotelDetailsResponse(body));
+    return this.send(
+      '/catalog/product/detail',
+      this.builder.buildHotelDetailsRequest(hotelCode, dto, transactionId),
+      (body) => this.parser.parseHotelDetailsResponse(body, hotelCode),
+    );
   }
 
   public getHotelCatalog(dto: QueryHotelCatalogDto): Promise<HotelCatalogResult> {

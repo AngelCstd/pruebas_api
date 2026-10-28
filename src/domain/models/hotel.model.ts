@@ -63,4 +63,5 @@ export interface HotelSearchResult {
   readonly totalItems: number;
   readonly hotels: readonly HotelItem[];
   readonly sources?: readonly SearchSourceStatus[];
+  readonly rawResponse?: string;
 }
