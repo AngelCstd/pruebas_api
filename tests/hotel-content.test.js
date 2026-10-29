@@ -11,18 +11,14 @@ const { NemoXmlParser } = require('../dist/adapters/nemo/nemo-xml.parser');
 const { XMLParser } = require('fast-xml-parser');
 const fs = require('node:fs');
 
-const validation = '<AvailabilityValidationRS Status="Success"><TripProductID>NEW-ID</TripProductID><ValidatedPrice Amount="850.00" Currency="EUR" PriceChanged="false"/><AvailabilityStatus>Confirmed</AvailabilityStatus><RateStatus>Available</RateStatus></AvailabilityValidationRS>';
-const fees = '<CancellationFeesQueryRS Status="Success"><TripProductID>NEW-ID</TripProductID><Currency>EUR</Currency><FreeCancellationDeadline>2026-11-10T23:59:59Z</FreeCancellationDeadline><FeeSchedule><Tier StartDate="2026-11-11T00:00:00Z" FeeAmount="170.00" PenaltyPercentage="20.00"/></FeeSchedule></CancellationFeesQueryRS>';
-
-
 const documentation = fs.readFileSync('API_DOCUMENTATION.md', 'utf8');
-const xmlExample = root => documentation.match(new RegExp(`<${root} [\\s\\S]*?</${root}>`))[0];
+const xmlExample = root => documentation.match(new RegExp(`<${root}(?:\\s[^>]*)?>[\\s\\S]*?</${root}>`))[0];
 const detailXml = xmlExample('AdditionalInfoQueryRS');
 const catalogXml = xmlExample('HotelCatalogQueryRS');
 const bookingXml = xmlExample('BookingProductsRS');
 
 test('hotel details, catalog HTTP routes and booking validation', async () => {
-  let upstreamBody = validation;
+  let upstreamBody = '';
   let upstreamStatus = 200;
   const received = [];
   const originalPost = axios.default.post;
@@ -94,7 +90,8 @@ test('hotel details, catalog HTTP routes and booking validation', async () => {
     assert.equal((await result.json()).amenities[0].name, 'Spa & Wellness Centre');
     assert.equal(received.at(-1).path, '/catalog/product/detail');
     assert.equal(received.at(-1).token, 'test-token');
-    assert.equal(new XMLParser().parse(received.at(-1).body).AdditionalInfoQueryRQ.LanguageCode, 'en');
+    assert.equal(new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' }).parse(received.at(-1).body)
+      .AdditionalInfoQueryRQ.GeneralParameters.PreferedLanguage['@_LanguageCode'], 'en');
     upstreamBody = catalogXml;
     result = await fetch(`${base}/hotels/catalog?destinationCode=2262&activeOnly=false&provider=nemo`);
     assert.equal(result.status, 200);
@@ -126,7 +123,10 @@ test('content XML parsing handles collections and rejects corrupt responses', ()
   for (const invalid of [catalogXml.replace('40.443912', 'NaN'), catalogXml.replace('40.443912', '91'), catalogXml.replace('<HotelCount>1', '<HotelCount>2')]) {
     assert.throws(() => parser.parseHotelCatalogResponse(invalid));
   }
-  assert.throws(() => parser.parseHotelDetailsResponse(detailXml.replace('15:00', '25:00')));
+  // Nemo no expone CheckInTime/CheckOutTime en este endpoint -- el servicio usa un valor fijo.
+  assert.equal(parser.parseHotelDetailsResponse(detailXml).checkInTime, '15:00');
+  assert.equal(parser.parseHotelDetailsResponse(detailXml).checkOutTime, '12:00');
+  assert.equal(parser.parseHotelDetailsResponse('<AdditionalInfoQueryRS><Details><Products><Hotels/></Products></Details></AdditionalInfoQueryRS>', 'FALLBACK-CODE').hotelCode, 'FALLBACK-CODE');
   assert.throws(() => parser.parseHotelDetailsResponse(detailXml.replace('https://cdn.psurfer.net/hotels/MAD00123/exterior_01.jpg', 'javascript:alert(1)')));
   assert.equal(parser.parseBookingResponse(bookingXml).totalPrice.amount, 850);
   assert.throws(() => parser.parseBookingResponse(bookingXml.replace('850.00', '-1')));
@@ -151,7 +151,8 @@ test('booking DTO validates nested guests and XML builder escapes user values', 
   assert.equal(parsed.TripProductID, dto.tripProductId);
   assert.equal(parsed.Rooms.Room.Guests.Guest['@_Age'], '8');
   assert.equal(parsed.PaymentDetails['@_Method'], 'CreditLimit');
-  const details = new XMLParser().parse(new NemoXmlBuilder().buildHotelDetailsRequest('H<&', {}, 'TX'));
-  assert.equal(details.AdditionalInfoQueryRQ.HotelCode, 'H<&');
-  assert.equal(details.AdditionalInfoQueryRQ.LanguageCode, 'es');
+  const details = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
+    .parse(new NemoXmlBuilder().buildHotelDetailsRequest('H<&', {}));
+  assert.equal(details.AdditionalInfoQueryRQ.Products.Hotels.Hotel['@_HotelDetailId'], 'H<&');
+  assert.equal(details.AdditionalInfoQueryRQ.GeneralParameters.PreferedLanguage['@_LanguageCode'], 'es');
 });

@@ -70,52 +70,81 @@ export class NemoXmlParser {
     };
   }
 
+  // El esquema real no trae ValidatedPrice/AvailabilityStatus/RateStatus como campos propios
+  // (confirmado contra el proyecto SoapUI real); vuelve a entregar la tarifa completa anidada en
+  // Details>Products>Hotels>Rate. Nemo no informa si el precio cambió respecto al de la búsqueda
+  // -- no hay con qué comparar en esta respuesta -- así que `priceChanged` queda en `false` como
+  // mejor esfuerzo documentado, y `rateStatus` reutiliza el código de disponibilidad de la
+  // habitación (es la única señal de estado que Nemo da aquí).
   public parseValidationResponse(xml: string, fallbackTransactionId: string): RateValidationResult {
     const response = this.parseResponse(xml, 'AvailabilityValidationRS');
-    const price = this.asRecord(response.ValidatedPrice, 'ValidatedPrice');
-    const changed = this.requiredString(price['@_PriceChanged'], 'PriceChanged');
-    if (!['true', 'false', '1', '0'].includes(changed)) {
-      throw new BadGatewayException('Invalid Nemo PriceChanged flag.');
-    }
+    const hotelsContainer = this.optionalRecord(this.optionalRecord(this.optionalRecord(response.Details)?.Products)?.Hotels);
+    const rawRate = hotelsContainer ? (Array.isArray(hotelsContainer.Rate) ? hotelsContainer.Rate[0] : hotelsContainer.Rate) : undefined;
+    const rate = this.asRecord(rawRate, 'Rate');
+    const { amount, currency } = this.ratePrice(rate.RatePrices, 'RatePrices');
+    const rooms = this.collection(rate.Rooms, 'Room');
+    const availabilityStatus = this.optionalString(rooms[0]?.['@_Availability']) ?? 'UNKNOWN';
+
     return {
       transactionId: this.optionalString(response['@_TransactionId']) ?? fallbackTransactionId,
       provider: ProviderType.NEMO,
-      tripProductId: this.requiredString(response.TripProductID, 'TripProductID'),
-      validatedPrice: {
-        amount: this.requiredAmount(price['@_Amount'], 'Amount'),
-        currency: this.requiredString(price['@_Currency'], 'Currency'),
-        priceChanged: changed === 'true' || changed === '1',
-      },
-      availabilityStatus: this.requiredString(response.AvailabilityStatus, 'AvailabilityStatus'),
-      rateStatus: this.requiredString(response.RateStatus, 'RateStatus'),
+      tripProductId: this.requiredString(rate['@_TripProductID'], 'TripProductID'),
+      validatedPrice: { amount, currency, priceChanged: false },
+      availabilityStatus,
+      rateStatus: availabilityStatus,
     };
   }
 
+  // El esquema real agrupa las condiciones de cancelación en Details>Products>Hotels>Hotel>Rate>
+  // ChargeConditions (confirmado contra el proyecto SoapUI real), no en un FeeSchedule plano.
+  // Cada ChargeCondition da un rango en días relativos al check-in (no fechas de calendario) y un
+  // monto fijo (no un porcentaje) -- se convierten usando el CheckIn real del hotel y el precio
+  // total de la tarifa como base del porcentaje.
   public parseCancellationFeesResponse(xml: string, fallbackTransactionId: string): CancellationFeesResult {
     const response = this.parseResponse(xml, 'CancellationFeesQueryRS');
-    if (response.FeeSchedule === undefined) {
-      throw new BadGatewayException('Invalid Nemo XML: missing FeeSchedule.');
-    }
-    const schedule = response.FeeSchedule === '' ? {} : this.asRecord(response.FeeSchedule, 'FeeSchedule');
-    const deadline = response.FreeCancellationDeadline === undefined ? undefined
-      : this.requiredDate(response.FreeCancellationDeadline, 'FreeCancellationDeadline');
+    const hotelsContainer = this.optionalRecord(this.optionalRecord(this.optionalRecord(response.Details)?.Products)?.Hotels);
+    const rawHotel = hotelsContainer ? (Array.isArray(hotelsContainer.Hotel) ? hotelsContainer.Hotel[0] : hotelsContainer.Hotel) : undefined;
+    const hotel = this.asRecord(rawHotel, 'Hotel');
+    const rate = this.asRecord(hotel.Rate, 'Rate');
+    const checkIn = this.requiredDate(hotel.CheckIn, 'CheckIn');
+    const { amount: totalAmount, currency } = this.ratePrice(rate.RatePrices, 'RatePrices');
+    const deadlineDate = this.optionalRecord(rate.Deadline)?.Date;
+    const deadline = deadlineDate === undefined ? undefined : this.requiredDate(deadlineDate, 'Deadline.Date');
+
     return {
       transactionId: this.optionalString(response['@_TransactionId']) ?? fallbackTransactionId,
       provider: ProviderType.NEMO,
-      tripProductId: this.requiredString(response.TripProductID, 'TripProductID'),
-      currency: this.requiredString(response.Currency, 'Currency'),
+      tripProductId: this.requiredString(rate['@_TripProductID'], 'TripProductID'),
+      currency,
       ...(deadline ? { freeCancellationDeadline: deadline } : {}),
-      feeSchedule: this.toRecordArray(schedule.Tier).map((tier) => {
-        const startDate = this.requiredDate(tier['@_StartDate'], 'StartDate');
-        const endDate = tier['@_EndDate'] === undefined ? undefined : this.requiredDate(tier['@_EndDate'], 'EndDate');
-        const penaltyPercentage = this.requiredAmount(tier['@_PenaltyPercentage'], 'PenaltyPercentage');
-        if (penaltyPercentage > 100 || (endDate && Date.parse(endDate) < Date.parse(startDate))) {
-          throw new BadGatewayException('Invalid Nemo cancellation fee tier.');
-        }
-        return { startDate, ...(endDate ? { endDate } : {}),
-          feeAmount: this.requiredAmount(tier['@_FeeAmount'], 'FeeAmount'), penaltyPercentage };
+      feeSchedule: this.collection(rate.ChargeConditions, 'ChargeCondition').map((condition) => {
+        const range = this.asRecord(condition.DateRangeWithDays, 'DateRangeWithDays');
+        const daysFrom = this.toNumber(range.DateFrom, 0);
+        const daysTo = this.toNumber(range.DateTo, 0);
+        const { amount: feeAmount } = this.ratePrice(condition.RatePrices, 'RatePrices');
+        const startDate = this.subtractDays(checkIn, daysTo);
+        const endDate = this.subtractDays(checkIn, daysFrom);
+        const penaltyPercentage = totalAmount > 0 ? Math.min(100, Math.round((feeAmount / totalAmount) * 10000) / 100) : 0;
+        return { startDate, endDate, feeAmount, penaltyPercentage };
       }),
     };
+  }
+
+  private ratePrice(value: unknown, label: string): { amount: number; currency: string } {
+    const container = this.optionalRecord(value);
+    const prices = container ? this.toRecordArray(container.RatePrice) : [];
+    const chosen = prices.find((p) => ['NMO.GBL.RPT.GRS', 'NMO.GBL.RPT.NET', 'GRS', 'NET'].includes(this.optionalString(p['@_Type']) ?? '')) ?? prices[0];
+    if (!chosen) throw new BadGatewayException(`Invalid Nemo XML: missing ${label}.`);
+    return {
+      amount: this.requiredAmount(chosen['#text'] ?? chosen['@_Amount'], label + '.Amount'),
+      currency: this.requiredString(chosen['@_Currency'], label + '.Currency'),
+    };
+  }
+
+  private subtractDays(isoDate: string, days: number): string {
+    const date = new Date(`${isoDate.slice(0, 10)}T00:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() - days);
+    return date.toISOString().slice(0, 10);
   }
 
   private requiredDate(value: unknown, label: string): string {
@@ -157,9 +186,6 @@ export class NemoXmlParser {
       if (root === 'AvailabilityQueryRS' && (code === 5000 || message.toLowerCase().includes('no availability'))) {
         return response;
       }
-      if (root === 'AdditionalInfoQueryRS') {
-        return response;
-      }
       throw this.mapNemoError(code, message);
     }
 
@@ -187,11 +213,13 @@ export class NemoXmlParser {
     const longitude = this.optionalNumber(hotel['@_Longitude'] ?? position.Longitude);
     const ratingRecord = this.optionalRecord(hotel.Rating);
     const ratingVal = ratingRecord ? ratingRecord.Value : hotel['@_Rating'] ?? hotel.HotelRating;
+    const hotelDetailId = this.optionalString(hotel['@_HotelDetailId']);
 
     return {
       hotelCode: this.requiredString(hotel['@_Code'] ?? hotel['@_HotelCode'] ?? hotel.HotelCode, 'HotelCode'),
       hotelName: this.requiredString(hotel['@_Name'] ?? hotel['@_HotelName'] ?? hotel.HotelName, 'HotelName'),
       rating: this.toNumber(ratingVal, 0),
+      ...(hotelDetailId ? { hotelDetailId } : {}),
       address: {
         street: this.optionalString(address.Line ?? address.Street) ?? '',
         city: this.optionalString(address.City) ?? '',
@@ -397,11 +425,20 @@ export class NemoXmlParser {
   private toNumber(value: unknown, fallback: number): number {
     return this.optionalNumber(value) ?? fallback;
   }
+  // El detalle real de Nemo viene anidado en Details>Products>Hotels>Hotel (confirmado contra el
+  // proyecto SoapUI real), no plano en la raíz como se asumía antes. Ese hotel de prueba de
+  // certificación no tiene CheckInTime/CheckOutTime/Images cargados en el sistema de Nemo (los
+  // tags no aparecen en absoluto en la respuesta) -- se usan valores por defecto razonables para
+  // check-in/check-out porque el esquema de este endpoint no los expone; no hay dato real de
+  // imágenes para confirmar el nombre del tag cuando un hotel sí las tiene cargadas.
   public parseHotelDetailsResponse(xml: string, hotelCodeFallback?: string): HotelDetailsResult {
     const response = this.parseResponse(xml, 'AdditionalInfoQueryRS');
-    if (response.Exceptions || !response.HotelCode) {
+    const hotelsContainer = this.optionalRecord(this.optionalRecord(this.optionalRecord(response.Details)?.Products)?.Hotels);
+    const rawHotel = hotelsContainer ? (Array.isArray(hotelsContainer.Hotel) ? hotelsContainer.Hotel[0] : hotelsContainer.Hotel) : undefined;
+    const hotel = this.optionalRecord(rawHotel) ?? {};
+    if (!hotel['@_HotelCode']) {
       return {
-        hotelCode: this.optionalString(response.HotelCode) ?? hotelCodeFallback ?? '',
+        hotelCode: hotelCodeFallback ?? '',
         description: 'Información general provista por Nemo.',
         checkInTime: '15:00',
         checkOutTime: '12:00',
@@ -409,15 +446,23 @@ export class NemoXmlParser {
         images: [],
       };
     }
+
+    const descriptions = this.collection(hotel.HotelDescriptions, 'HotelDescription')
+      .map((item) => this.optionalString(item['#text']))
+      .filter((text): text is string => !!text && text.trim() !== '');
+    const addressLine = this.optionalString(
+      this.optionalRecord(this.optionalRecord(this.toRecordArray(this.optionalRecord(hotel.Addresses)?.Address)[0])?.AddressLines)?.AddressLine,
+    );
+
     return {
-      hotelCode: this.requiredString(response.HotelCode, 'HotelCode'),
-      description: this.requiredString(response.Description, 'Description'),
-      checkInTime: this.requiredTime(response.CheckInTime, 'CheckInTime'),
-      checkOutTime: this.requiredTime(response.CheckOutTime, 'CheckOutTime'),
-      amenities: this.collection(response.Amenities, 'Amenity').map((item) => ({
+      hotelCode: this.requiredString(hotel['@_HotelCode'], 'HotelCode'),
+      description: descriptions.join(' ') || addressLine || 'Información general provista por Nemo.',
+      checkInTime: '15:00',
+      checkOutTime: '12:00',
+      amenities: this.collection(hotel.Amenities, 'Amenity').map((item) => ({
         code: this.requiredString(item['@_Code'], 'Amenity.Code'), name: this.requiredString(item['#text'], 'Amenity.Name'),
       })),
-      images: this.collection(response.Images, 'Image').map((item) => {
+      images: this.collection(hotel.Images, 'Image').map((item) => {
         const url = this.requiredString(item['@_Url'], 'Image.Url');
         try { if (!['https:', 'http:'].includes(new URL(url).protocol)) throw new Error(); }
         catch { throw new BadGatewayException('Invalid Nemo image URL.'); }

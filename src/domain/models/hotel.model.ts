@@ -44,6 +44,8 @@ export interface HotelItem {
   readonly longitude?: number;
   /** Por ahora, lo informan convenio y mock (este último como dato de ejemplo). */
   readonly thumbnailUrl?: string;
+  /** Solo Nemo. Necesario para pedir el detalle de este hotel (ver nemo-xml.builder.ts). */
+  readonly hotelDetailId?: string;
   readonly rates: readonly HotelRate[];
   /** De dónde viene el hotel. Solo lo informa la búsqueda combinada (`provider=all`). */
   readonly source?: ProviderType;

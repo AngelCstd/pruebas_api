@@ -39,13 +39,13 @@ export class NemoXmlAdapter {
 
   public validateRate(dto: ValidateRateDto): Promise<RateValidationResult> {
     const transactionId = this.createTransactionId();
-    return this.send('/catalog/product/validate', this.builder.buildValidationRequest(dto, transactionId),
+    return this.send('/catalog/product/validate', this.builder.buildValidationRequest(dto),
       (body) => this.parser.parseValidationResponse(body, transactionId));
   }
 
   public getCancellationFees(dto: CancellationFeesDto): Promise<CancellationFeesResult> {
     const transactionId = this.createTransactionId();
-    return this.send('/booking/cancellation/fees', this.builder.buildCancellationFeesRequest(dto, transactionId),
+    return this.send('/booking/cancellation/fees', this.builder.buildCancellationFeesRequest(dto),
       (body) => this.parser.parseCancellationFeesResponse(body, transactionId));
   }
 
@@ -88,10 +88,12 @@ export class NemoXmlAdapter {
     return `TX_NEMO_${timestamp}_${random}`;
   }
   public getHotelDetails(hotelCode: string, dto: QueryHotelDetailsDto): Promise<HotelDetailsResult> {
-    const transactionId = this.createTransactionId();
+    // Nemo identifica el detalle por `HotelDetailId` (viene del resultado de búsqueda), no por el
+    // `hotelCode` numérico de la URL -- ver el comentario en buildHotelDetailsRequest.
+    const hotelDetailId = dto.hotelDetailId ?? hotelCode;
     return this.send(
       '/catalog/product/detail',
-      this.builder.buildHotelDetailsRequest(hotelCode, dto, transactionId),
+      this.builder.buildHotelDetailsRequest(hotelDetailId, dto),
       (body) => this.parser.parseHotelDetailsResponse(body, hotelCode),
     );
   }

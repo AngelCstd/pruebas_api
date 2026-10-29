@@ -22,4 +22,13 @@ export class QueryHotelDetailsDto extends QueryHotelProviderDto {
   @Matches(/^[a-z]{2}(?:-[A-Z]{2})?$/)
   @ApiPropertyOptional({ type: String, description: 'Language code for hotel content', example: 'es', default: 'es' })
   public language?: string = 'es';
+
+  // Identificador de Nemo distinto del hotelCode de la URL, devuelto por /hotels/search para este
+  // hotel. Sin él, Nemo no puede resolver el detalle (ver nemo-xml.builder.ts).
+  @IsOptional()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(100)
+  @ApiPropertyOptional({ type: String, description: 'Nemo HotelDetailId returned by /hotels/search for this hotel (required for provider=nemo to resolve details)', example: 'B7H-29NOV-4ND' })
+  public hotelDetailId?: string;
 }

@@ -11,8 +11,12 @@ const { NemoXmlParser } = require('../dist/adapters/nemo/nemo-xml.parser');
 const { XMLParser } = require('fast-xml-parser');
 const fs = require('node:fs');
 
-const validation = '<AvailabilityValidationRS Status="Success"><TripProductID>NEW-ID</TripProductID><ValidatedPrice Amount="850.00" Currency="EUR" PriceChanged="false"/><AvailabilityStatus>Confirmed</AvailabilityStatus><RateStatus>Available</RateStatus></AvailabilityValidationRS>';
-const fees = '<CancellationFeesQueryRS Status="Success"><TripProductID>NEW-ID</TripProductID><Currency>EUR</Currency><FreeCancellationDeadline>2026-11-10T23:59:59Z</FreeCancellationDeadline><FeeSchedule><Tier StartDate="2026-11-11T00:00:00Z" FeeAmount="170.00" PenaltyPercentage="20.00"/></FeeSchedule></CancellationFeesQueryRS>';
+// Formas reales confirmadas contra el ambiente de certificación de Nemo (y contra el proyecto
+// SoapUI oficial del proveedor) -- ver API_DOCUMENTATION.md secciones 6.1/6.2. Nemo anida todo en
+// Details>Products>Hotels y no entrega un flag PriceChanged ni un FeeSchedule plano con fechas de
+// calendario: entrega ChargeConditions con días relativos al check-in.
+const validation = '<AvailabilityValidationRS><Details><Products><Hotels><Rate HotelCode="H1" SupplierId="ALL" TripProductID="NEW-ID"><Rooms><Room Type="NMO.HTL.RMT.DBL" Availability="NMO.HTL.AVB.CNF"/></Rooms><RatePrices><RatePrice Currency="EUR">850.00</RatePrice></RatePrices><CheckIn>2026-11-11</CheckIn><CheckOut>2026-11-13</CheckOut></Rate></Hotels></Products></Details></AvailabilityValidationRS>';
+const fees = '<CancellationFeesQueryRS><Details><Products><Hotels><Hotel HotelCode="H1" SupplierID="ALL"><CheckIn>2026-11-15</CheckIn><CheckOut>2026-11-20</CheckOut><Rate TripProductID="NEW-ID"><RatePrices><RatePrice Currency="EUR">850.00</RatePrice></RatePrices><ChargeConditions><ChargeCondition Sequence="1"><DateRangeWithDays><DateFrom>2</DateFrom><DateTo>4</DateTo></DateRangeWithDays><RatePrices><RatePrice Currency="EUR">170.00</RatePrice></RatePrices></ChargeCondition></ChargeConditions><Deadline><Date>2026-11-10T23:59:59.000</Date></Deadline></Rate></Hotel></Hotels></Products></Details></CancellationFeesQueryRS>';
 
 test('catalog and lifecycle HTTP routes, including Nemo XML transport', async () => {
   let upstreamBody = validation;
@@ -129,7 +133,8 @@ test('catalog and lifecycle HTTP routes, including Nemo XML transport', async ()
     assert.equal(result.body.validatedPrice.priceChanged, false);
     assert.equal(received.at(-1).path, '/catalog/product/validate');
     assert.equal(received.at(-1).token, 'test-token');
-    assert.equal(new XMLParser().parse(received.at(-1).body).AvailabilityValidationRQ.TripProductID, escapedId);
+    assert.equal(new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' }).parse(received.at(-1).body)
+      .AvailabilityValidationRQ.Products.Hotels.Hotel['@_TripProductID'], escapedId);
     upstreamBody = fees;
     result = await post('/hotels/cancellation-fees?provider=nemo', { tripProductId: 'NEW-ID' });
     assert.equal(result.status, 200);
@@ -154,12 +159,15 @@ test('catalog and lifecycle HTTP routes, including Nemo XML transport', async ()
 test('Nemo parser rejects corrupt monetary data and normalizes fee tiers', () => {
   const parser = new NemoXmlParser();
   for (const value of ['NaN', '', '-1', 'Infinity']) assert.throws(() => parser.parseValidationResponse(validation.replace('850.00', value), 'TX'));
-  assert.throws(() => parser.parseValidationResponse(validation.replace('PriceChanged="false"', 'PriceChanged="maybe"'), 'TX'));
-  assert.equal(parser.parseValidationResponse(validation.replace('PriceChanged="false"', 'PriceChanged="true"'), 'TX').validatedPrice.priceChanged, true);
-  assert.equal(parser.parseCancellationFeesResponse(fees.replace(/<Tier[^>]+\/>/, ''), 'TX').feeSchedule.length, 0);
-  assert.equal(parser.parseCancellationFeesResponse(fees.replace(/(<Tier[^>]+\/>)/, '$1$1'), 'TX').feeSchedule.length, 2);
+  // Nemo no expone un flag "el precio cambió" en este response -- re-entrega la tarifa completa.
+  const validated = parser.parseValidationResponse(validation, 'TX');
+  assert.equal(validated.validatedPrice.priceChanged, false);
+  assert.equal(validated.availabilityStatus, 'NMO.HTL.AVB.CNF');
+  const chargeConditionRe = /<ChargeCondition\b[\s\S]*?<\/ChargeCondition>/;
+  assert.equal(parser.parseCancellationFeesResponse(fees.replace(chargeConditionRe, ''), 'TX').feeSchedule.length, 0);
+  assert.equal(parser.parseCancellationFeesResponse(fees.replace(chargeConditionRe, (m) => m + m), 'TX').feeSchedule.length, 2);
   assert.throws(() => parser.parseCancellationFeesResponse(fees.replace('170.00', 'bad'), 'TX'));
-  assert.throws(() => parser.parseCancellationFeesResponse(fees.replace(/<FeeSchedule>.*<\/FeeSchedule>/, ''), 'TX'));
+  assert.throws(() => parser.parseCancellationFeesResponse(fees.replace(/<CheckIn>[\s\S]*?<\/CheckIn>/, ''), 'TX'));
 });
 
 test('source TypeScript contains no explicit any', () => {

@@ -11,7 +11,7 @@ const hotelRoutes = {
   '/hotels/validate': ['post', 200, ['provider']],
   '/hotels/cancellation-fees': ['post', 200, ['provider']],
   '/hotels/catalog': ['get', 200, ['destinationCode', 'activeOnly', 'provider', 'tenantId']],
-  '/hotels/{hotelCode}/details': ['get', 200, ['language', 'provider', 'tenantId']],
+  '/hotels/{hotelCode}/details': ['get', 200, ['hotelDetailId', 'language', 'provider', 'tenantId']],
   '/hotels/book': ['post', 201, ['provider']],
   '/hotels/bookings': ['get', 200, ['limit', 'organizationId', 'provider', 'status', 'tenantId']],
   '/hotels/bookings/{locator}': ['get', 200, ['provider', 'tenantId']],

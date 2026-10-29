@@ -325,12 +325,19 @@ The root element is `<AvailabilityQueryRS>`. It returns search metadata, paginat
 
 Before presenting final payment terms or committing an order, clients **must** invoke `/catalog/product/validate`. This operation verifies rate stability, room availability, and whether price drift occurred since the initial search.
 
+> [!IMPORTANT]
+> Esta sección se corrigió tras verificar el request/response real contra el ambiente de certificación de Nemo (y contra el proyecto SoapUI oficial del proveedor, `PS_WebServices-soapui-project.xml`). La versión anterior (`TripProductID` plano en la raíz) nunca funcionó contra Nemo real — producía `NullPointerException`.
+
 #### Validation Request (`AvailabilityValidationRQ`)
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<AvailabilityValidationRQ TransactionId="TX_VAL_20260902_1001" TransactionMode="Synchronous">
-  <TripProductID>NMO-PRD-20260902-882194-A91C3E</TripProductID>
+<AvailabilityValidationRQ>
+  <Products>
+    <Hotels>
+      <Hotel TripProductID="NMO-PRD-20260902-882194-A91C3E" />
+    </Hotels>
+  </Products>
 </AvailabilityValidationRQ>
 ```
 
@@ -338,16 +345,27 @@ Before presenting final payment terms or committing an order, clients **must** i
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<AvailabilityValidationRS TransactionId="TX_VAL_20260902_1001" Status="Success">
-  <TripProductID>NMO-PRD-20260902-882194-A91C3E</TripProductID>
-  <ValidatedPrice Amount="850.00" Currency="EUR" PriceChanged="false" />
-  <AvailabilityStatus>Confirmed</AvailabilityStatus>
-  <RateStatus>Available</RateStatus>
+<AvailabilityValidationRS>
+  <Details>
+    <Products>
+      <Hotels>
+        <Rate HotelCode="MAD00123" SupplierId="ALL" TripProductID="NMO-PRD-20260902-882194-A91C3E">
+          <Rooms>
+            <Room Type="NMO.HTL.RMT.DBL" Availability="NMO.HTL.AVB.CNF" RoomDescription="Double Room" />
+          </Rooms>
+          <Board Code="1">Room Only</Board>
+          <RatePrices><RatePrice Currency="EUR" Type="NMO.GBL.RPT.GRS">850.00</RatePrice></RatePrices>
+          <CheckIn>2026-11-11</CheckIn>
+          <CheckOut>2026-11-13</CheckOut>
+        </Rate>
+      </Hotels>
+    </Products>
+  </Details>
 </AvailabilityValidationRS>
 ```
 
 > [!NOTE]
-> If a price adjustment occurred upstream, `PriceChanged` will be set to `true` and the updated amount will appear in `ValidatedPrice`. If the rate has been withdrawn, error `5000` or `1101` is returned.
+> Nemo no informa aquí si el precio cambió respecto al de la búsqueda (no hay un campo `PriceChanged`): solo re-entrega la tarifa completa. `hotel-provider-service` trata esto como "no detectamos cambio" (`priceChanged: false`), documentado en `nemo-xml.parser.ts`. La disponibilidad real viene del atributo `Availability` de `Room` (ej. `NMO.HTL.AVB.CNF`).
 
 ---
 
@@ -355,12 +373,19 @@ Before presenting final payment terms or committing an order, clients **must** i
 
 Retrieves the definitive cancellation penalty schedule immediately prior to booking commitment.
 
+> [!IMPORTANT]
+> Esta sección se corrigió tras verificar el request/response real contra el ambiente de certificación de Nemo (y contra el proyecto SoapUI oficial del proveedor). Nemo no entrega un `FeeSchedule` plano con fechas de calendario y porcentaje: entrega `ChargeConditions` con rangos en **días relativos al check-in** y un **monto fijo** por tramo. `hotel-provider-service` convierte esos días a fechas de calendario usando el `CheckIn` real del hotel, y calcula el porcentaje dividiendo el monto del tramo entre el precio total de la tarifa (ver `nemo-xml.parser.ts`, método `parseCancellationFeesResponse`).
+
 #### Cancellation Fees Request (`CancellationFeesQueryRQ`)
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<CancellationFeesQueryRQ TransactionId="TX_FEES_20260902_1002" TransactionMode="Synchronous">
-  <TripProductID>NMO-PRD-20260902-882194-A91C3E</TripProductID>
+<CancellationFeesQueryRQ>
+  <Products>
+    <Hotels>
+      <Hotel TripProductID="NMO-PRD-20260902-882194-A91C3E" ShowHotelInformation="false" />
+    </Hotels>
+  </Products>
 </CancellationFeesQueryRQ>
 ```
 
@@ -368,15 +393,33 @@ Retrieves the definitive cancellation penalty schedule immediately prior to book
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<CancellationFeesQueryRS TransactionId="TX_FEES_20260902_1002" Status="Success">
-  <TripProductID>NMO-PRD-20260902-882194-A91C3E</TripProductID>
-  <Currency>EUR</Currency>
-  <FreeCancellationDeadline>2026-11-10T23:59:59Z</FreeCancellationDeadline>
-  <FeeSchedule>
-    <Tier StartDate="2026-11-11T00:00:00Z" EndDate="2026-11-13T23:59:59Z" FeeAmount="170.00" PenaltyPercentage="20.00" />
-    <Tier StartDate="2026-11-14T00:00:00Z" EndDate="2026-11-15T12:00:00Z" FeeAmount="425.00" PenaltyPercentage="50.00" />
-    <Tier StartDate="2026-11-15T12:00:01Z" FeeAmount="850.00" PenaltyPercentage="100.00" />
-  </FeeSchedule>
+<CancellationFeesQueryRS>
+  <Details>
+    <Products>
+      <Hotels>
+        <Hotel HotelCode="MAD00123" SupplierID="ALL">
+          <CheckIn>2026-11-15</CheckIn>
+          <CheckOut>2026-11-20</CheckOut>
+          <Rate TripProductID="NMO-PRD-20260902-882194-A91C3E">
+            <RatePrices><RatePrice Type="NMO.GBL.RPT.GRS" Currency="EUR">850.00</RatePrice></RatePrices>
+            <ChargeConditions>
+              <ChargeCondition Sequence="1">
+                <ChargeDescription ChargeType="NMO.HTL.CHT.CAN">20% a 4 días del check-in</ChargeDescription>
+                <DateRangeWithDays><DateFrom>2</DateFrom><DateTo>4</DateTo></DateRangeWithDays>
+                <RatePrices><RatePrice Type="NMO.GBL.RPT.GRS" Currency="EUR">170.00</RatePrice></RatePrices>
+              </ChargeCondition>
+              <ChargeCondition Sequence="2">
+                <ChargeDescription ChargeType="NMO.HTL.CHT.CAN">50% a 2 días del check-in</ChargeDescription>
+                <DateRangeWithDays><DateFrom>0</DateFrom><DateTo>2</DateTo></DateRangeWithDays>
+                <RatePrices><RatePrice Type="NMO.GBL.RPT.GRS" Currency="EUR">425.00</RatePrice></RatePrices>
+              </ChargeCondition>
+            </ChargeConditions>
+            <Deadline><Date>2026-11-10T23:59:59.000</Date></Deadline>
+          </Rate>
+        </Hotel>
+      </Hotels>
+    </Products>
+  </Details>
 </CancellationFeesQueryRS>
 ```
 
@@ -493,13 +536,23 @@ Cancels an active booking locator and applies cancellation penalty policies base
 
 Retrieves rich static content such as hotel facility lists, room dimensions, high-resolution photo galleries, and check-in/out policies.
 
+> [!IMPORTANT]
+> El *sobre* de este response (`Details > Products > Hotels > Hotel`) y el identificador de pedido (`HotelDetailId`, distinto del `hotelCode` numérico de búsqueda) están verificados contra el ambiente de certificación de Nemo y contra el proyecto SoapUI oficial del proveedor. El hotel de prueba de certificación no tiene `Amenities`/`Images`/horarios de check-in/out cargados en el sistema de Nemo, así que el contenido de `Amenities`/`Images` de abajo es ilustrativo (mismo nombre de tag documentado por Nemo, sin verificar aún contra un hotel con contenido real). `CheckInTime`/`CheckOutTime` no los expone este endpoint en absoluto; el servicio usa `15:00`/`12:00` como valor por defecto.
+
 #### Additional Info Request (`AdditionalInfoQueryRQ`)
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<AdditionalInfoQueryRQ TransactionId="TX_INFO_20260902_1006">
-  <HotelCode>MAD00123</HotelCode>
-  <LanguageCode>es</LanguageCode>
+<AdditionalInfoQueryRQ>
+  <GeneralParameters>
+    <PreferedLanguage LanguageCode="es" />
+    <PreferedCurrency CurrencyCode="USD" />
+  </GeneralParameters>
+  <Products>
+    <Hotels>
+      <Hotel HotelDetailId="MAD00123" />
+    </Hotels>
+  </Products>
 </AdditionalInfoQueryRQ>
 ```
 
@@ -507,21 +560,32 @@ Retrieves rich static content such as hotel facility lists, room dimensions, hig
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<AdditionalInfoQueryRS TransactionId="TX_INFO_20260902_1006" Status="Success">
-  <HotelCode>MAD00123</HotelCode>
-  <Description>El Grand Palace Hotel &amp; Spa ofrece un alojamiento de lujo en el distrito financiero de Madrid con spa completo y restaurante de alta cocina.</Description>
-  <CheckInTime>15:00</CheckInTime>
-  <CheckOutTime>12:00</CheckOutTime>
-  <Amenities>
-    <Amenity Code="SPA">Spa &amp; Wellness Centre</Amenity>
-    <Amenity Code="WIFI">Free High-Speed Wi-Fi</Amenity>
-    <Amenity Code="POOL">Heated Indoor Swimming Pool</Amenity>
-    <Amenity Code="PARK">Private Valet Parking</Amenity>
-  </Amenities>
-  <Images>
-    <Image Category="Exterior" Url="https://cdn.psurfer.net/hotels/MAD00123/exterior_01.jpg" />
-    <Image Category="Room" Url="https://cdn.psurfer.net/hotels/MAD00123/deluxe_01.jpg" />
-  </Images>
+<AdditionalInfoQueryRS>
+  <Details>
+    <Products>
+      <Hotels>
+        <Hotel SupplierID="ALL" HotelCode="MAD00123" HotelDetailId="MAD00123">
+          <HotelName>Grand Palace Hotel &amp; Spa</HotelName>
+          <HotelDescriptions>
+            <HotelDescription HotelDescriptionType="General">El Grand Palace Hotel &amp; Spa ofrece un alojamiento de lujo en el distrito financiero de Madrid con spa completo y restaurante de alta cocina.</HotelDescription>
+          </HotelDescriptions>
+          <Amenities>
+            <Amenity Code="SPA">Spa &amp; Wellness Centre</Amenity>
+            <Amenity Code="WIFI">Free High-Speed Wi-Fi</Amenity>
+            <Amenity Code="POOL">Heated Indoor Swimming Pool</Amenity>
+            <Amenity Code="PARK">Private Valet Parking</Amenity>
+          </Amenities>
+          <Addresses>
+            <Address><AddressLines><AddressLine>Paseo de la Castellana 42, Madrid</AddressLine></AddressLines></Address>
+          </Addresses>
+          <Images>
+            <Image Category="Exterior" Url="https://cdn.psurfer.net/hotels/MAD00123/exterior_01.jpg" />
+            <Image Category="Room" Url="https://cdn.psurfer.net/hotels/MAD00123/deluxe_01.jpg" />
+          </Images>
+        </Hotel>
+      </Hotels>
+    </Products>
+  </Details>
 </AdditionalInfoQueryRS>
 ```
 
